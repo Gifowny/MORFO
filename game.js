@@ -343,8 +343,8 @@ function buildApp() {
         <div class="credits-list">
           <div class="credit-item">
             <div class="role">Missão 01 — Trígono carotídeo</div>
-            <a class="credit-link" href="https://anatomyqa.com/carotid-triangle-boundaries-contents/"
-               target="_blank" rel="noopener">anatomyqa.com — Carotid triangle</a>
+            <a class="credit-link" href="https://teachmeanatomy.info/neck/areas/anterior-triangle/"
+               target="_blank" rel="noopener">teachmeanatomy.info — Anterior triangle of the neck</a>
           </div>
           <div class="credit-item">
             <div class="role">Missões 02 e 03 — Ilustrações das artérias</div>
@@ -516,8 +516,8 @@ const IMAGES = {
   // ── MISSÃO 01 — Trígono Carotídeo ──────────────────────────────
   // Imagem do pescoço com o triângulo carotídeo em destaque.
   // Fonte online (funciona sem baixar nada):
-  neck_triangle: 'https://anatomyqa.com/wp-content/uploads/2018/05/Carotid-triangle.jpg',
-  neck_muscles:  'https://anatomyqa.com/wp-content/uploads/2018/05/Carotid-triangle.jpg',
+  neck_triangle: 'img/trigono.png',
+  neck_muscles:  'img/trigono.png',
   // Se quiser usar um arquivo local, salve-o como img/trigono.png e troque para:
   //   neck_triangle: 'img/trigono.png',
 
@@ -545,42 +545,43 @@ function buildNeckDiagram() {
   const zoomed = STATE.phase1Step > 0;
   const imgSrc = IMAGES.neck_triangle;
 
-  // Retângulos que cobrem os rótulos em inglês da imagem original.
-  // Posições em % do container (calibradas para Carotid-triangle.jpg).
+  // Retângulos que cobrem os rótulos em inglês e a marca d'água.
+  // Medidos sobre img/trigono.png (710x434). Valores em % do container.
   const COVERS = [
-    { l: 74.0, t: 20.0, w: 26.0, h:  8.5 },  // Stylohyoid
-    { l: 74.0, t: 31.0, w: 26.0, h:  8.5 },  // Digastric
-    { l: 69.0, t: 45.0, w: 31.0, h:  8.5 },  // SCM
-    { l:  0.0, t: 40.0, w: 29.0, h:  8.5 },  // Hyoid bone
-    { l:  0.0, t: 49.0, w: 29.0, h:  8.5 },  // Carotid triangle
-    { l:  0.0, t: 60.0, w: 29.0, h:  8.5 },  // Omohyoid
+    { l: 71.0, t: 15.0, w: 29.0, h:  8.0 },  // Stylohyoid
+    { l: 71.0, t: 23.8, w: 29.0, h:  8.0 },  // Digastric
+    { l: 69.5, t: 35.8, w: 30.5, h:  8.0 },  // SCM
+    { l:  0.0, t: 32.3, w: 27.5, h:  8.0 },  // Hyoid bone
+    { l:  0.0, t: 39.9, w: 29.0, h:  8.0 },  // Carotid triangle
+    { l:  0.0, t: 50.1, w: 27.5, h:  8.0 },  // Omohyoid
+    { l: 54.0, t: 85.0, w: 46.0, h: 15.0 },  // marca d'água
   ];
   const coversHtml = COVERS.map(function(c) {
     return '<div style="position:absolute;left:' + c.l + '%;top:' + c.t + '%;' +
-      'width:' + c.w + '%;height:' + c.h + '%;background:#efeae2;pointer-events:none"></div>';
+      'width:' + c.w + '%;height:' + c.h + '%;background:#ffffff;pointer-events:none"></div>';
   }).join('');
 
-  // Destaque do trígono só aparece depois de responder (passo 2)
+  // Destaque do trígono (aparece só depois de responder)
   const triHtml = zoomed
-    ? '<div style="position:absolute;left:40%;top:34%;width:19%;height:32%;' +
-        'background:rgba(200,86,58,0.28);border:2px solid #c8563a;border-radius:4px;' +
+    ? '<div style="position:absolute;left:40.5%;top:27.5%;width:12.5%;height:26.5%;' +
+        'background:rgba(200,86,58,0.30);border:2px solid #c8563a;border-radius:4px;' +
         'pointer-events:none"></div>' +
-      '<div style="position:absolute;left:49.5%;top:44%;transform:translateX(-50%);' +
-        'background:rgba(10,10,15,0.88);border-radius:6px;padding:5px 10px;pointer-events:none;' +
+      '<div style="position:absolute;left:46.5%;top:57%;transform:translateX(-50%);' +
+        'background:rgba(10,10,15,0.9);border-radius:6px;padding:5px 10px;pointer-events:none;' +
         'font-family:Raleway,sans-serif;font-size:10px;font-weight:800;color:#ffcabb;' +
         'text-align:center;line-height:1.25;white-space:nowrap">TRÍGONO<br/>CAROTÍDEO</div>'
     : '';
 
   // Caixa de pergunta (só no passo 1)
   const calloutHtml = zoomed ? '' :
-    '<div style="position:absolute;right:3%;top:4%;background:rgba(13,17,23,0.94);' +
+    '<div style="position:absolute;right:2%;top:60%;background:rgba(13,17,23,0.94);' +
       'border:2px solid #c8563a;border-radius:8px;padding:7px 11px;pointer-events:none;' +
       'font-family:Raleway,sans-serif;font-size:10px;font-weight:800;color:#c8563a;' +
-      'text-align:center;line-height:1.3">Qual região<br/>é esta? ↓</div>';
+      'text-align:center;line-height:1.3">Qual região<br/>é esta? ←</div>';
 
   return '<div id="neck-diagram-container" ' +
       'style="position:relative;width:100%;max-width:600px;margin:0 auto;line-height:0;' +
-        'border-radius:10px;overflow:hidden;background:var(--surface2);min-height:180px">' +
+        'border-radius:10px;overflow:hidden;background:#ffffff;min-height:180px">' +
       '<img src="' + imgSrc + '" alt="Diagrama anatômico" ' +
         'style="width:100%;display:block" ' +
         'onerror="this.style.display=\'none\';' +
