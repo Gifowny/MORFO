@@ -14,6 +14,44 @@ const STATE = {
   phase4State: {},
 };
 
+// ╔═══════════════════════════════════════════════════════════╗
+// ║  MODO DESENVOLVEDOR                                       ║
+// ║  Vale apenas na sessão atual (some ao fechar a aba).       ║
+// ╚═══════════════════════════════════════════════════════════╝
+const DEV_SENHA = 'DGVDLMMT';
+
+function devAtivo() {
+  try { return sessionStorage.getItem('mbf_dev') === '1'; }
+  catch (e) { return false; }
+}
+
+function devLigar() {
+  try { sessionStorage.setItem('mbf_dev', '1'); } catch (e) {}
+  desenharSeloDev();
+}
+
+function devDesligar() {
+  try { sessionStorage.removeItem('mbf_dev'); } catch (e) {}
+  desenharSeloDev();
+  updatePhaseBadges();
+}
+
+// Selo fixo no canto superior direito
+function desenharSeloDev() {
+  let selo = document.getElementById('dev-selo');
+  if (!devAtivo()) { if (selo) selo.remove(); return; }
+  if (selo) return;
+  selo = document.createElement('div');
+  selo.id = 'dev-selo';
+  selo.innerHTML =
+    '<span class="dev-ponto"></span>' +
+    '<span>DEV MODE</span>' +
+    '<button title="Sair do modo desenvolvedor" onclick="devDesligar()">✕</button>';
+  document.body.appendChild(selo);
+}
+
+window.devDesligar = devDesligar;
+
 function saveProgress() {
   localStorage.setItem('mbf_completed', JSON.stringify(STATE.completedPhases));
 }
@@ -93,6 +131,42 @@ const BRANCHES = {
       { id: 'rpa', label: 'RAMO PARIETAL',         question: 'Qual o nome dessa artéria?' },
     ],
   },
+};
+
+// ── MISSÃO 03 — quebra-cabeça por ramo ────────────────────────────────
+// Cada peça vira uma máscara p3_<ramo>_<id>.png do tamanho da imagem completa,
+// então o encaixe é pixel-perfeito (mesma técnica da Missão 02).
+const P3_RAMOS = {
+  // base  = tronco do ramo, já fica no tabuleiro (não é peça arrastável)
+  // ordem = peças que o aluno precisa encaixar
+  // ar    = proporção altura/largura da imagem completa (mantém o tabuleiro com altura)
+  lin: { completa:'Lingual_completa.png', base:'lin_base', ar: 43.2,
+         ordem:['rdl','sub','prl'] },
+  fac: { completa:'Facial_completa.png',  base:'fac_base', ar:109.6,
+         ordem:['palc','rgl','smnt','labi','labs','ang'] },
+  max: { completa:'Maxilar_completa.png', base:'max_base', ar: 85.4,
+         ordem:['mnm','alvi','milh','ment','tpa','tpp','mass','rpt','buc',
+                'aspo','infor','aspa','esfp','pald','pama','pame'] },
+  tmp: { completa:'Temporal_superficial_completa.png', base:'tmp_base', ar:103.2,
+         ordem:['ftr','rfr','rpa'] },
+};
+
+// Miniatura de cada peça na bandeja
+const P3_IMGS = {
+  lin_base:'Lingual.png', rdl:'Ramos_dorsais_da_lingua.png',
+  sub:'Sublingual.png',   prl:'Profunda_da_lingua.png',
+  fac_base:'Facial.png',  palc:'Palatina_ascendente.png',
+  rgl:'Ramos_glandulares.png', smnt:'Submentual.png',
+  labi:'Labial_inf.png',  labs:'Labial_sup.png', ang:'Angular.png',
+  max_base:'Maxilar.png', mnm:'Meningea_Media.png',
+  alvi:'Alveolar_inferior.png', milh:'Milohioidea.png', ment:'Mentual.png',
+  tpa:'Temp_profunda_ant.png',  tpp:'Trmporal_profunda_post.png',
+  mass:'Masseterica.png', rpt:'Ramos_pterigoideos.png', buc:'Bucal.png',
+  aspo:'Alv__Sup_post.png', infor:'Infraorbitaria.png', aspa:'Alv_sup_ant.png',
+  esfp:'Esfenopalatina.png', pald:'Palatina_descendente.png',
+  pama:'Palatina_maior.png', pame:'Palatina_menor.png',
+  tmp_base:'Temporal_superficial.png', ftr:'Facial_transversa.png',
+  rfr:'Ramo_Frontal.png', rpa:'Ramo_parietal.png',
 };
 
 const PHASE4_DB = [
@@ -188,6 +262,7 @@ function resetLives() {
 }
 
 function loseLife(onDead) {
+  if (devAtivo()) return false;   // dev mode: não perde vida
   STATE.lives--;
   updateHUD();
   if (STATE.lives <= 0) {
@@ -203,9 +278,14 @@ function loseLife(onDead) {
 function updateHUD() {
   // The HUD is re-created via innerHTML on every render, so we always
   // query fresh elements here — never cache .heart references.
+  const dev = devAtivo();
   document.querySelectorAll('.heart').forEach((h, i) => {
-    h.classList.toggle('lost', i >= STATE.lives);
+    h.classList.toggle('lost', !dev && i >= STATE.lives);
+    h.classList.toggle('heart-dev', dev);
   });
+  const hud = document.querySelector('.hud-lives');
+  if (hud) hud.title = dev ? 'Modo desenvolvedor: vidas infinitas' : '';
+  desenharSeloDev();
 }
 
 function createHUD(phaseLabel, progressText, backFn) {
@@ -247,6 +327,7 @@ function buildApp() {
 
     <!-- PHASE SELECTOR -->
     <div class="screen" id="screen-phases">
+      <button id="btn-dev" title="?" onclick="abrirPortaDev()">?</button>
       <h2 style="font-family:var(--font-display);font-weight:800;margin-bottom:4px">Selecionar Missão</h2>
       <p class="text-muted text-center">Escolha sua missão</p>
       <div class="phases-grid">
@@ -364,6 +445,23 @@ function buildApp() {
       </div>
     </div>
 
+    <!-- Porta do modo desenvolvedor -->
+    <div class="overlay" id="overlay-dev">
+      <div class="popup" style="max-width:380px">
+        <h2>🔒 Acesso restrito</h2>
+        <div class="popup-body">Informe a senha para continuar.</div>
+        <div class="answer-input-wrap">
+          <input class="answer-input" id="dev-senha" type="password"
+                 placeholder="Senha..." autocomplete="off" maxlength="24"/>
+          <button class="btn btn-primary btn-sm" id="dev-ok">Entrar</button>
+        </div>
+        <div class="feedback" id="dev-fb"></div>
+        <div class="popup-actions">
+          <button class="btn btn-ghost btn-sm" onclick="closeOverlay('overlay-dev')">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Phase 2 dropdown popup -->
     <div class="overlay" id="overlay-p2-q">
       <div class="popup" style="max-width:520px">
@@ -394,7 +492,7 @@ function buildApp() {
       <div class="popup" style="max-width:520px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
           <h2 id="puzzle-q-title" style="margin:0">Qual o nome dessa artéria?</h2>
-          <button onclick="closeOverlay('overlay-puzzle-q')"
+          <button onclick="cancelarPecaP3()"
             style="background:none;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;line-height:1;padding:0 0 0 12px;flex-shrink:0"
             title="Fechar">✕</button>
         </div>
@@ -406,7 +504,7 @@ function buildApp() {
         </div>
         <div class="feedback" id="puzzle-q-feedback"></div>
         <div class="popup-actions" id="puzzle-q-actions" style="display:none">
-          <button class="btn btn-ghost btn-sm" onclick="closeOverlay('overlay-puzzle-q')">← Voltar</button>
+          <button class="btn btn-ghost btn-sm" onclick="cancelarPecaP3()">← Voltar</button>
           <button class="btn btn-primary btn-sm" id="puzzle-q-next">Próxima →</button>
         </div>
       </div>
@@ -430,12 +528,58 @@ function buildApp() {
   document.getElementById('btn-credits').onclick = () => openOverlay('overlay-credits');
 }
 
+window.abrirPortaDev = function() {
+  const inp = document.getElementById('dev-senha');
+  const fb  = document.getElementById('dev-fb');
+  const btn = document.getElementById('dev-ok');
+
+  inp.value = '';
+  inp.className = 'answer-input';
+  fb.className = 'feedback';
+  btn.disabled = false;
+
+  function conferir() {
+    const val = (inp.value || '').trim().toUpperCase();
+    if (!val) return;
+    if (val === DEV_SENHA) {
+      inp.className = 'answer-input correct';
+      fb.className = 'feedback show success';
+      fb.textContent = '✅ Modo desenvolvedor ativado.';
+      btn.disabled = true;
+      devLigar();
+      setTimeout(function() {
+        closeOverlay('overlay-dev');
+        updatePhaseBadges();
+      }, 1100);
+    } else {
+      inp.className = 'answer-input wrong';
+      fb.className = 'feedback show error';
+      fb.textContent = '❌ Senha incorreta.';
+      setTimeout(function() {
+        inp.className = 'answer-input';
+        inp.value = '';
+        fb.className = 'feedback';
+      }, 1800);
+    }
+  }
+
+  btn.onclick = conferir;
+  inp.onkeydown = function(e){ if (e.key === 'Enter') conferir(); };
+  openOverlay('overlay-dev');
+  setTimeout(function(){ inp.focus(); }, 100);
+};
+
 function updatePhaseBadges() {
-  const cp = STATE.completedPhases;
+  const cp  = STATE.completedPhases;
+  const dev = devAtivo();
+  desenharSeloDev();
   ['p1','p2','p3','p4'].forEach((id, i) => {
     const badge = document.getElementById(`badge-${id}`);
     const card = document.getElementById(`card-phase${i+1}`);
-    if (cp.includes(i+1)) {
+    if (dev && !cp.includes(i+1)) {
+      badge.className = 'phase-badge dev-badge'; badge.textContent = '🔓 Dev';
+      card.classList.remove('locked');
+    } else if (cp.includes(i+1)) {
       badge.className = 'phase-badge done'; badge.textContent = '✅ Concluída';
       card.classList.remove('locked');
     } else if (i === 0 || cp.includes(i)) {
@@ -449,7 +593,7 @@ function updatePhaseBadges() {
 }
 
 function startPhase(n) {
-  if (n > 1 && !STATE.completedPhases.includes(n-1)) return;
+  if (!devAtivo() && n > 1 && !STATE.completedPhases.includes(n-1)) return;
   STATE.currentPhase = n;
   resetLives();
   if (n === 1) initPhase1();
@@ -771,7 +915,9 @@ function buildP2Puzzle() {
               const p = P2_PIECES[id];
               return '<div class="p2-piece" data-piece="' + id + '" draggable="true" ' +
                        'title="Arraste para o tabuleiro">' +
-                       '<img src="img/' + p.img + '" draggable="false" alt=""/>' +
+                       '<img src="img/' + p.img + '" draggable="false" alt="" ' +
+                       'onerror="this.classList.add(\'img-falhou\')"/>' +
+                       '<span class="p2-piece-fb">?</span>' +
                      '</div>';
             }).join('')
         ) +
@@ -949,6 +1095,8 @@ window.selectP2Option = function(val, el) {
 // Close dropdown on outside click
 document.addEventListener('click', e => {
   if (!e.target.closest('.custom-select-wrap')) {
+    const l3 = document.getElementById('p3q-lista');
+    if (l3) l3.classList.remove('open');
     const list = document.getElementById('p2q-select-list');
     if (list) { list.classList.remove('open'); p2DropdownOpen = false; }
   }
@@ -1004,197 +1152,317 @@ function submitP2Answer() {
 // ─── PHASE 3 ─────────────────────────────────────────────────
 
 function initPhase3() {
-  STATE.phase3State = { placedBranches: new Set(), branchSteps: {} };
+  STATE.phase3State = {
+    ramosProntos: new Set(),   // ramos concluídos
+    posic: {},                 // { ramo: Set(idsPosicionados) }
+    resolv: {},                // { ramo: Set(idsRespondidos) }
+  };
   showScreen('screen-phase3');
   renderPhase3();
 }
 
+function p3Estado(bid) {
+  const ps = STATE.phase3State;
+  if (!ps.posic[bid])  ps.posic[bid]  = new Set();
+  if (!ps.resolv[bid]) ps.resolv[bid] = new Set();
+  return ps;
+}
+
+// ── menu dos 4 ramos ─────────────────────────────────────────────
 function renderPhase3() {
   const el = document.getElementById('screen-phase3');
   const ps = STATE.phase3State;
-  const branchIds = ['lin','fac','tmp','max'];
-  const done = branchIds.filter(b => ps.placedBranches.has(b)).length;
+  const ids = ['lin','fac','tmp','max'];
+  const feitos = ids.filter(function(b){ return ps.ramosProntos.has(b); }).length;
 
-  el.innerHTML = createHUD('FASE 03 · Ramos Colaterais', `${done}/${branchIds.length} ramos`, "showScreen('screen-home')") + `
-    <div class="game-wrap" style="overflow-y:auto">
-      <p class="text-muted text-center mb-16" style="font-size:12px">
-        Selecione um ramo da carótida externa para explorar suas subdivisões.
-      </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:600px">
-        ${branchIds.map(bid => {
+  el.innerHTML = createHUD('MISSÃO 03 · Ramos da Carótida',
+    feitos + '/' + ids.length + ' ramos', "showScreen('screen-home')") +
+    '<div class="game-wrap" style="overflow-y:auto">' +
+      '<p class="text-muted text-center mb-16" style="font-size:12px">' +
+        'Escolha um ramo da carótida externa para montar.</p>' +
+      '<div class="p3-menu">' +
+        ids.map(function(bid) {
           const b = BRANCHES[bid];
-          const completed = ps.placedBranches.has(bid);
+          const pronto = ps.ramosProntos.has(bid);
           const total = b.arteries.length;
-          const placed = ps.branchSteps[bid] || 0;
-          return `
-          <div style="background:var(--surface);border:1.5px solid ${completed?'var(--green)':'var(--border)'};
-               border-radius:var(--radius-lg);padding:20px;cursor:${completed?'default':'pointer'};transition:all 0.2s"
-            ${!completed ? `onclick="openBranch('${bid}')"` : ''}>
-            <div style="font-family:var(--font-display);font-size:11px;font-weight:700;
-                 color:${completed?'var(--green)':'var(--accent2)'};letter-spacing:0.1em;margin-bottom:4px">
-              ${completed ? '✅ COMPLETO' : '→ EXPLORAR'}
-            </div>
-            <div style="font-family:var(--font-display);font-size:13px;font-weight:700;margin-bottom:4px">${b.label}</div>
-            <div style="font-size:11px;color:var(--text-muted)">${placed}/${total} artérias identificadas</div>
-            ${!completed ? `<div style="height:3px;background:var(--bg);border-radius:2px;margin-top:10px;overflow:hidden">
-              <div style="height:100%;width:${Math.round(placed/total*100)}%;background:var(--accent);border-radius:2px"></div>
-            </div>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
+          const feito = ps.resolv[bid] ? ps.resolv[bid].size : 0;
+          const pct = Math.round(feito / total * 100);
+          return '<div class="p3-card' + (pronto ? ' p3-card-ok' : '') + '"' +
+            (pronto ? '' : ' onclick="openBranch(\'' + bid + '\')"') + '>' +
+            '<img class="p3-card-img" src="img/' + P3_RAMOS[bid].completa + '" alt=""/>' +
+            '<div class="p3-card-info">' +
+              '<div class="p3-card-tag">' + (pronto ? '✅ Concluído' : '→ Montar') + '</div>' +
+              '<div class="p3-card-nome">' + b.label + '</div>' +
+              '<div class="p3-card-sub">' + feito + '/' + total + ' artérias</div>' +
+              (pronto ? '' :
+                '<div class="p3-bar"><div class="p3-bar-in" style="width:' + pct + '%"></div></div>') +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+
   updateHUD();
-  if (branchIds.every(b => ps.placedBranches.has(b))) setTimeout(() => completePhase(3), 600);
+  if (ids.every(function(b){ return ps.ramosProntos.has(b); })) {
+    setTimeout(function(){ completePhase(3); }, 700);
+  }
 }
 
 window.openBranch = function(bid) {
-  const ps = STATE.phase3State;
-  if (ps.placedBranches.has(bid)) return;
+  if (STATE.phase3State.ramosProntos.has(bid)) return;
+  p3Estado(bid);
   showBranchZoom(bid);
 };
 
-// Branch image config: src image + viewBox crop (x y w h) for each branch
-// Imagem de referência mostrada no topo de cada ramo (Missão 03).
-// Usa as peças do quebra-cabeça que você já tem em img/.
-const BRANCH_ZOOM_IMGS = {
-  lin: { src: IMAGES.branch_lin },
-  fac: { src: IMAGES.branch_fac },
-  max: { src: IMAGES.branch_max },
-  tmp: { src: IMAGES.branch_tmp },
-};
+// ── quebra-cabeça de um ramo ─────────────────────────────────────
+let p3DragId = null;
 
 function showBranchZoom(bid) {
-  const b = BRANCHES[bid];
-  const ps = STATE.phase3State;
-  const placed = ps.branchSteps[bid] || 0;
+  const b  = BRANCHES[bid];
+  const ps = p3Estado(bid);
   const el = document.getElementById('screen-phase3');
-  const arteries = b.arteries;
-  const cfg = BRANCH_ZOOM_IMGS[bid];
+  const feito = ps.resolv[bid].size;
 
   el.innerHTML = createHUD('MISSÃO 03 · ' + b.label,
-    placed + '/' + arteries.length + ' artérias', "renderPhase3()") +
-    '<div class="game-wrap" style="overflow-y:auto;align-items:center;gap:12px">' +
-      // Reference image with zoom-in feel
-      '<div id="branch-img-wrap" style="width:100%;max-width:420px;margin:0 auto;' +
-        'border-radius:12px;overflow:hidden;border:1px solid var(--border);' +
-        'background:var(--surface2);flex-shrink:0">' +
-        '<img id="branch-ref-img" src="' + cfg.src + '" alt="Peça anatômica" ' +
-          'style="width:100%;max-height:180px;object-fit:contain;display:block" ' +
-          'onerror="this.parentElement.style.display=\'none\'"/>' +
-      '</div>' +
-      // Puzzle slots below
-      '<div style="width:100%;max-width:640px;margin:0 auto">' +
-        buildBranchPuzzle(bid, arteries, ps) +
-      '</div>' +
+    feito + '/' + b.arteries.length + ' artérias', 'renderPhase3()') +
+    '<div class="game-wrap" style="overflow-y:auto">' +
+      '<div id="p3-puzzle-root"></div>' +
     '</div>';
 
   updateHUD();
-
+  buildBranchPuzzle(bid);
 }
 
-function buildBranchPuzzle(bid, arteries, ps) {
-  const placed = ps.branchSteps[bid] || 0;
+function buildBranchPuzzle(bid) {
+  const ps    = p3Estado(bid);
+  const cfg   = P3_RAMOS[bid];
+  const posic = ps.posic[bid];
+  const root  = document.getElementById('p3-puzzle-root');
+  if (!root) return;
 
-  const rows = arteries.map(function(a, i) {
-    const done   = i < placed;
-    const active = i === placed;
+  const naBandeja = cfg.ordem.filter(function(id){ return !posic.has(id); });
 
-    const numBg = done ? 'var(--green)' : (active ? 'var(--accent)' : '#1e2630');
-    const numBorder = done ? 'var(--green)' : (active ? 'var(--accent)' : '#30363d');
-    const numColor = (done || active) ? '#fff' : '#4a5568';
+  const bandeja =
+    '<aside id="p3-bandeja">' +
+      '<div class="p2-bandeja-cab">Peças<span>' + naBandeja.length + '</span></div>' +
+      '<div class="p2-bandeja-lista">' +
+        (naBandeja.length === 0
+          ? '<p class="p2-bandeja-vazia">Todas as peças<br/>foram usadas</p>'
+          : naBandeja.map(function(id) {
+              return '<div class="p2-piece p3-piece" data-piece="' + id + '" draggable="true" ' +
+                'title="Arraste para o tabuleiro">' +
+                '<img src="img/' + P3_IMGS[id] + '" draggable="false" alt="" ' +
+                'onerror="this.classList.add(\'img-falhou\')"/>' +
+                '<span class="p2-piece-fb">?</span></div>';
+            }).join('')) +
+      '</div>' +
+    '</aside>';
 
-    let boxStyle, boxContent;
-    if (done) {
-      boxStyle = 'background:rgba(63,185,80,0.15);border:1.5px solid var(--green)';
-      boxContent = '<span style="font-family:Raleway,sans-serif;font-size:11px;font-weight:700;' +
-        'color:var(--green);letter-spacing:0.02em">' + a.label + '</span>' +
-        '<span style="margin-left:auto;color:var(--green);font-size:14px;font-weight:700">✓</span>';
-    } else if (active) {
-      boxStyle = 'background:rgba(200,86,58,0.12);border:2px dashed var(--accent);cursor:pointer';
-      boxContent = '<span style="font-family:Raleway,sans-serif;font-size:15px;font-weight:900;' +
-        'color:var(--accent)">?</span>' +
-        '<span style="margin-left:8px;font-family:Raleway,sans-serif;font-size:10px;' +
-        'color:var(--text-muted)">clique para identificar</span>';
-    } else {
-      boxStyle = 'background:rgba(22,27,34,0.6);border:1px dashed #30363d;opacity:0.45';
-      boxContent = '<span style="font-family:Raleway,sans-serif;font-size:11px;color:#30363d">—</span>';
-    }
-
-    const clickAttr = active ? ' onclick="openBranchSlot(\'' + bid + '\',' + i + ')"' : '';
-
-    return '<div' + clickAttr + ' style="display:flex;align-items:center;gap:10px;margin-bottom:7px">' +
-      '<div style="width:24px;height:24px;border-radius:50%;flex-shrink:0;' +
-        'background:' + numBg + ';border:1.5px solid ' + numBorder + ';' +
-        'display:flex;align-items:center;justify-content:center;' +
-        'font-family:Raleway,sans-serif;font-size:10px;font-weight:800;color:' + numColor + '">' +
-        (i + 1) + '</div>' +
-      '<div style="flex:1;display:flex;align-items:center;padding:9px 13px;border-radius:8px;' +
-        'transition:all 0.15s;' + boxStyle + '">' + boxContent + '</div>' +
-    '</div>';
+  // Mesma lógica da Missão 02: o fundo é a artéria completa bem escurecida,
+  // e cada segmento acende em cor plena quando é encaixado/acertado.
+  const pecas = cfg.ordem.filter(function(id){ return posic.has(id); }).map(function(id) {
+    const ok = ps.resolv[bid].has(id);
+    return '<img class="p3-seg' + (ok ? ' p3-seg-ok' : '') + '" draggable="false" alt="" ' +
+      'src="img/p3_' + bid + '_' + id + '.png"/>';
   }).join('');
 
-  return '<div style="background:var(--surface);border:1px solid var(--border);' +
-      'border-radius:12px;padding:16px">' +
-      '<div style="font-family:Raleway,sans-serif;font-size:9px;font-weight:700;' +
-        'letter-spacing:0.14em;color:var(--text-muted);text-transform:uppercase;' +
-        'margin-bottom:12px">Ramos da artéria</div>' +
-      rows +
+  root.innerHTML =
+    '<div id="p2-layout">' + bandeja +
+      '<div id="p2-tabuleiro">' +
+        // padding-bottom garante altura mesmo se a imagem falhar
+        '<div id="p3-drop-area" style="padding-bottom:' + cfg.ar + '%">' +
+          // fundo: artéria completa escurecida, serve de gabarito
+          '<img class="p3-guia" src="img/' + cfg.completa + '" alt="" draggable="false"/>' +
+          // tronco do ramo: já aceso, serve de âncora
+          '<img class="p3-seg p3-seg-ok" src="img/p3_' + bid + '_' + cfg.base + '.png" ' +
+            'alt="" draggable="false"/>' +
+          pecas +
+          (posic.size === 0
+            ? '<div class="p3-alvo"><span>Solte a peça aqui</span></div>'
+            : '') +
+        '</div>' +
+        '<p class="p2-dica">Arraste as peças da esquerda e solte no tabuleiro.<br/>' +
+          'Cada peça encaixa sozinha no lugar certo.</p>' +
+      '</div>' +
     '</div>';
+
+  attachP3Events(bid);
 }
 
-window.openBranchSlot = function(bid, idx) {
-  const b = BRANCHES[bid];
-  const artery = b.arteries[idx];
-  showBranchPopup(bid, artery, idx, b.arteries.length);
+function attachP3Events(bid) {
+  const limpar = function() {
+    document.querySelectorAll('.p3-piece').forEach(function(p){ p.classList.remove('p2-selected'); });
+  };
+
+  document.querySelectorAll('.p3-piece').forEach(function(peca) {
+    peca.addEventListener('dragstart', function(){ p3DragId = peca.dataset.piece; peca.classList.add('p2-dragging'); });
+    peca.addEventListener('dragend',   function(){ peca.classList.remove('p2-dragging'); });
+    peca.addEventListener('click', function() {
+      const sel = peca.classList.contains('p2-selected');
+      limpar();
+      if (sel) { p3DragId = null; return; }
+      p3DragId = peca.dataset.piece;
+      peca.classList.add('p2-selected');
+    });
+  });
+
+  const area = document.getElementById('p3-drop-area');
+  if (!area) return;
+  area.addEventListener('dragover',  function(e){ e.preventDefault(); area.classList.add('p2-area-hover'); });
+  area.addEventListener('dragleave', function(){ area.classList.remove('p2-area-hover'); });
+  area.addEventListener('drop', function(e) {
+    e.preventDefault(); area.classList.remove('p2-area-hover');
+    if (p3DragId) soltarPecaP3(bid, p3DragId);
+  });
+  area.addEventListener('click', function(){ if (p3DragId) soltarPecaP3(bid, p3DragId); });
+}
+
+// Encaixa a peça e pergunta o nome da artéria.
+function soltarPecaP3(bid, pieceId) {
+  const ps = p3Estado(bid);
+  if (ps.posic[bid].has(pieceId)) return;
+  p3DragId = null;
+  ps.posic[bid].add(pieceId);
+  buildBranchPuzzle(bid);
+
+  const idx = BRANCHES[bid].arteries.findIndex(function(a){ return a.id === pieceId; });
+  if (idx === -1) return;
+  setTimeout(function(){ showBranchPopup(bid, BRANCHES[bid].arteries[idx], pieceId); }, 420);
+}
+
+function verificarRamoCompleto(bid) {
+  const ps = STATE.phase3State;
+  const todas = BRANCHES[bid].arteries.every(function(a){ return ps.resolv[bid].has(a.id); });
+  if (todas) {
+    ps.ramosProntos.add(bid);
+    animarConclusaoP3(bid);
+    return true;
+  }
+  return false;
+}
+
+// Fecha o popup devolvendo a peça para a bandeja.
+window.cancelarPecaP3 = function() {
+  if (!p3Pendente) { closeOverlay('overlay-puzzle-q'); return; }
+  const bid = p3Pendente.bid, pid = p3Pendente.pieceId;
+  STATE.phase3State.posic[bid].delete(pid);
+  p3Pendente = null;
+  closeOverlay('overlay-puzzle-q');
+  showBranchZoom(bid);
 };
 
-function showBranchPopup(bid, artery, step, total) {
+let p3Pendente = null;   // { bid, pieceId } aguardando resposta
+
+let p3Sel = null;   // opção escolhida no dropdown
+
+window.toggleP3Dropdown = function() {
+  const l = document.getElementById('p3q-lista');
+  if (l) l.classList.toggle('open');
+};
+
+window.selecionarP3 = function(valor, el) {
+  p3Sel = valor;
+  const lb = document.getElementById('p3q-label');
+  lb.textContent = valor;
+  lb.style.color = 'var(--text)';
+  document.getElementById('p3q-lista').classList.remove('open');
+  document.querySelectorAll('#p3q-lista .custom-select-option')
+    .forEach(function(o){ o.classList.remove('active'); });
+  el.classList.add('active');
+};
+
+function showBranchPopup(bid, artery, pieceId) {
+  p3Pendente = { bid: bid, pieceId: pieceId };
+  p3Sel = null;
+  const ps = p3Estado(bid);
+  const feito = ps.resolv[bid].size + 1;
+
   document.getElementById('puzzle-q-title').textContent = artery.question;
-  document.getElementById('puzzle-q-body').textContent = `${BRANCHES[bid].label} · Artéria ${step+1} de ${total}`;
+  document.getElementById('puzzle-q-body').textContent =
+    BRANCHES[bid].label + ' · Artéria ' + feito + ' de ' + BRANCHES[bid].arteries.length;
 
-  const input = document.getElementById('puzzle-q-input');
-  const submitBtn = document.getElementById('puzzle-q-submit');
-  const fb = document.getElementById('puzzle-q-feedback');
-  const actions = document.getElementById('puzzle-q-actions');
+  // opções = artérias do ramo ainda não identificadas, embaralhadas
+  const restantes = BRANCHES[bid].arteries
+    .filter(function(a){ return !ps.resolv[bid].has(a.id); });
+  const opcoes = shuffle(restantes.map(function(a){ return a.label; }));
+
   const wrap = document.getElementById('puzzle-q-input-wrap');
+  wrap.innerHTML =
+    '<div class="custom-select-wrap" style="flex:1">' +
+      '<button class="custom-select-btn" onclick="toggleP3Dropdown()">' +
+        '<span id="p3q-label" style="color:var(--text-muted)">Selecione uma artéria...</span>' +
+        '<span class="select-arrow">▾</span>' +
+      '</button>' +
+      '<div class="custom-select-list" id="p3q-lista">' +
+        opcoes.map(function(o) {
+          return '<div class="custom-select-option" ' +
+            'onclick="selecionarP3(\'' + o.replace(/'/g, "\\'") + '\', this)">' + o + '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>' +
+    '<button class="btn btn-primary btn-sm" id="p3q-ok">Confirmar</button>';
+  wrap.style.display = 'flex';
 
-  input.value = ''; input.className = 'answer-input';
-  fb.className = 'feedback'; actions.style.display = 'none';
-  wrap.style.display = 'flex'; submitBtn.disabled = false;
+  const fb   = document.getElementById('puzzle-q-feedback');
+  const acts = document.getElementById('puzzle-q-actions');
+  fb.className = 'feedback';
+  acts.style.display = 'none';
 
-  input.oninput = () => { input.value = input.value.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); };
+  const btn = document.getElementById('p3q-ok');
 
-  function attempt() {
-    const val = normalizeInput(input.value);
-    if (!val) return;
-    if (isAnswerCorrect(val, artery.label)) {
-      input.className = 'answer-input correct';
-      fb.className = 'feedback show success'; fb.textContent = `✅ Correto! ${artery.label}`;
-      submitBtn.disabled = true; actions.style.display = 'flex';
-      document.getElementById('puzzle-q-next').onclick = () => {
+  function tentar() {
+    if (!p3Sel) {
+      fb.className = 'feedback show info';
+      fb.textContent = 'Selecione uma opção antes de confirmar.';
+      return;
+    }
+    btn.disabled = true;
+
+    if (isAnswerCorrect(p3Sel, artery.label)) {
+      fb.className = 'feedback show success';
+      fb.textContent = '✅ Correto! ' + artery.label;
+      acts.style.display = 'flex';
+      document.getElementById('puzzle-q-next').onclick = function() {
+        p3Pendente = null;
         closeOverlay('overlay-puzzle-q');
-        const ps = STATE.phase3State;
-        ps.branchSteps[bid] = (ps.branchSteps[bid] || 0) + 1;
-        if (ps.branchSteps[bid] >= BRANCHES[bid].arteries.length) {
-          ps.placedBranches.add(bid);
-          renderPhase3();
-        } else {
-          showBranchZoom(bid);
-        }
+        ps.resolv[bid].add(pieceId);
+        if (!verificarRamoCompleto(bid)) showBranchZoom(bid);
       };
     } else {
-      input.className = 'answer-input wrong';
-      const dead = loseLife(() => { STATE.phase3State.branchSteps[bid] = 0; closeOverlay('overlay-puzzle-q'); showBranchZoom(bid); });
-      if (!dead) {
-        fb.className = 'feedback show error'; fb.textContent = `❌ Incorreto. A resposta é: ${artery.label}`;
-        setTimeout(() => { input.className = 'answer-input'; input.value = ''; fb.className = 'feedback'; }, 2500);
+      const morreu = loseLife(function(){ closeOverlay('overlay-puzzle-q'); initPhase3(); });
+      if (!morreu) {
+        fb.className = 'feedback show error';
+        fb.textContent = '❌ Incorreto. A resposta é: ' + artery.label;
+        setTimeout(function() {
+          p3Pendente = null;
+          ps.posic[bid].delete(pieceId);      // peça volta para a bandeja
+          closeOverlay('overlay-puzzle-q');
+          showBranchZoom(bid);
+        }, 2600);
       }
     }
   }
-  submitBtn.onclick = attempt;
-  input.onkeydown = e => { if (e.key === 'Enter') attempt(); };
+
+  btn.onclick = tentar;
   openOverlay('overlay-puzzle-q');
-  setTimeout(() => input.focus(), 100);
+}
+
+// Ramo concluído: zoom-out revelando o ramo completo.
+function animarConclusaoP3(bid) {
+  const area = document.getElementById('p3-drop-area');
+  if (!area) { renderPhase3(); return; }
+
+  area.classList.add('p2-concluido');
+  area.innerHTML =
+    '<img class="p2-final" src="img/' + P3_RAMOS[bid].completa + '" alt=""/>' +
+    '<div class="p2-final-tag">' + BRANCHES[bid].label + ' completa</div>';
+
+  const dica = document.querySelector('.p2-dica');
+  if (dica) dica.textContent = 'Ramo concluído!';
+  const band = document.getElementById('p3-bandeja');
+  if (band) band.classList.add('p2-bandeja-off');
+
+  setTimeout(function(){ renderPhase3(); }, 2500);
 }
 
 // ─── PHASE 4 ─────────────────────────────────────────────────
