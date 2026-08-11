@@ -9,6 +9,7 @@ const STATE = {
   completedPhases: JSON.parse(localStorage.getItem('mbf_completed') || '[]'),
   phase1Step: 0,
   phase2Placed: new Set(),
+  phase2Posicionadas: new Set(),
   phase3State: {},
   phase4State: {},
 };
@@ -30,6 +31,7 @@ const MUSCLES = [
 ];
 
 const ARTERY_SLOTS = [
+  { id: 'acc', label: 'A. CAROTIDA COMUM',      question: 'Qual o nome dessa artéria?' },
   { id: 'ci',  label: 'A. CAROTIDA INTERNA',     question: 'Qual o nome dessa artéria?' },
   { id: 'ce',  label: 'A. CAROTIDA EXTERNA',     question: 'Qual o nome dessa artéria?' },
   { id: 'tis', label: 'A. TIREOIDEA SUPERIOR',   question: 'Qual o nome desse ramo colateral anterior?' },
@@ -65,7 +67,6 @@ const BRANCHES = {
   max: {
     label: 'A. MAXILAR',
     arteries: [
-      { id: 'tia',   label: 'A. TIMPANICA ANTERIOR',           question: 'Qual o nome dessa artéria?' },
       { id: 'mnm',   label: 'A. MENINGEA MEDIA',               question: 'Qual o nome dessa artéria?' },
       { id: 'alvi',  label: 'A. ALVEOLAR INFERIOR',            question: 'Qual o nome dessa artéria?' },
       { id: 'milh',  label: 'A. MILOHIODEA',                   question: 'Qual o nome dessa artéria?' },
@@ -146,6 +147,20 @@ function normalizeInput(str) {
   return str.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
+// Compare user answer to correct label, accepting with or without "A. " prefix
+function isAnswerCorrect(userVal, correctLabel) {
+  const norm = (s) => s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const u = norm(userVal);
+  const c = norm(correctLabel);
+  if (u === c) return true;
+  // Accept without the "A. " or "RAMOS " prefix
+  const stripped = c.replace(/^(A\.|RAMOS)\s+/, '');
+  if (u === stripped) return true;
+  // Accept with just the prefix letter stripped (e.g. "SUBLINGUAL" matches "A. SUBLINGUAL")
+  if (stripped === u) return true;
+  return false;
+}
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active', 'screen-enter'));
   const el = document.getElementById(id);
@@ -218,14 +233,11 @@ function buildApp() {
     <!-- HOME -->
     <div class="screen active" id="screen-home">
       <div class="home-logo">
-        <div class="eyebrow">Monitoria Acadêmica · UNIFOR</div>
-        <h1>Morfologia<br/><span>Bucomaxilofacial</span> II</h1>
-        <p class="subtitle">Vascularização da Cabeça e Pescoço</p>
+        <div class="eyebrow">Morfologia Bucomaxilofacial II</div>
+        <h1>Missão<br/><span>Carótida</span></h1>
+        <p class="subtitle">Morfologia Bucomaxilofacial II</p>
       </div>
-      <svg class="pulse-line" viewBox="0 0 280 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <polyline points="0,20 40,20 55,5 65,35 75,5 85,35 95,20 140,20 160,20 280,20"
-          stroke="#c8563a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
-      </svg>
+      <div class="pulse-divider"></div>
       <div class="home-buttons">
         <button class="btn btn-primary btn-lg" id="btn-play">▶ &nbsp;Jogar</button>
         <button class="btn btn-secondary" id="btn-extras">📹 &nbsp;Extras</button>
@@ -235,29 +247,29 @@ function buildApp() {
 
     <!-- PHASE SELECTOR -->
     <div class="screen" id="screen-phases">
-      <h2 style="font-family:var(--font-display);font-weight:800;margin-bottom:4px">Selecionar Fase</h2>
-      <p class="text-muted text-center">Escolha por onde começar</p>
+      <h2 style="font-family:var(--font-display);font-weight:800;margin-bottom:4px">Selecionar Missão</h2>
+      <p class="text-muted text-center">Escolha sua missão</p>
       <div class="phases-grid">
         <div class="phase-card" id="card-phase1" onclick="startPhase(1)">
-          <div class="phase-num">FASE 01</div>
-          <div class="phase-title">Trígono Carotídeo</div>
+          <div class="phase-num">MISSÃO 01</div>
+          <div class="phase-title">Reconhecimento Anatômico</div>
           <div class="phase-desc">Identifique a região e os músculos delimitadores</div>
           <span class="phase-badge open" id="badge-p1">Disponível</span>
         </div>
         <div class="phase-card" id="card-phase2" onclick="startPhase(2)">
-          <div class="phase-num">FASE 02</div>
-          <div class="phase-title">Quebra-cabeça da Carótida</div>
+          <div class="phase-num">MISSÃO 02</div>
+          <div class="phase-title">Árvore Carotídea</div>
           <div class="phase-desc">Monte a árvore da carótida comum</div>
           <span class="phase-badge locked-badge" id="badge-p2">🔒 Bloqueada</span>
         </div>
         <div class="phase-card" id="card-phase3" onclick="startPhase(3)">
-          <div class="phase-num">FASE 03</div>
-          <div class="phase-title">Ramos Colaterais</div>
+          <div class="phase-num">MISSÃO 03</div>
+          <div class="phase-title">Ramos da Carótida</div>
           <div class="phase-desc">Explore os ramos da carótida externa em detalhe</div>
           <span class="phase-badge locked-badge" id="badge-p3">🔒 Bloqueada</span>
         </div>
         <div class="phase-card" id="card-phase4" onclick="startPhase(4)">
-          <div class="phase-num">FASE 04</div>
+          <div class="phase-num">MISSÃO 04</div>
           <div class="phase-title">Áreas de Irrigação</div>
           <div class="phase-desc">Complete as frases sobre cada artéria</div>
           <span class="phase-badge locked-badge" id="badge-p4">🔒 Bloqueada</span>
@@ -302,25 +314,50 @@ function buildApp() {
 
     <!-- OVERLAYS -->
     <div class="overlay" id="overlay-credits">
-      <div class="popup">
-        <h2>👥 Créditos</h2>
+      <div class="popup" style="max-width:520px;max-height:86vh;overflow-y:auto">
+        <h2>🦷 Créditos</h2>
+
         <div class="credits-list">
           <div class="credit-item">
-            <div class="name">Profa. Responsável</div>
-            <div class="role">Professora da disciplina Morfologia Bucomaxilofacial II</div>
+            <div class="role">Programador geral</div>
+            <div class="name">Diogo Guimarães Gifoni</div>
+            <div class="mat">2410398</div>
           </div>
+
           <div class="credit-item">
-            <div class="name">Monitor(a) de Odontologia</div>
-            <div class="role">Desenvolvimento do conteúdo didático e revisão científica</div>
+            <div class="role">Arquiteto de projeto</div>
+            <div class="name">Vitor Dantas de Almeida Mattos</div>
+            <div class="mat">2422969</div>
           </div>
+
           <div class="credit-item">
-            <div class="name">Diogo Gifoni (Gifowny)</div>
-            <div class="role">Desenvolvimento do sistema — Monitoria em Computação · UNIFOR</div>
+            <div class="role">Monitoras</div>
+            <div class="name">Maria Tereza Rodrigues Alves</div>
+            <div class="mat">2421073</div>
+            <div class="name" style="margin-top:6px">Letícia Maria Nunes Pinto</div>
+            <div class="mat">2421032</div>
           </div>
         </div>
-        <p class="text-muted" style="font-size:12px;line-height:1.6">
-          Projeto de monitoria interdisciplinar desenvolvido na Universidade de Fortaleza (UNIFOR).
+
+        <div class="credits-sec">Imagens</div>
+        <div class="credits-list">
+          <div class="credit-item">
+            <div class="role">Missão 01 — Trígono carotídeo</div>
+            <a class="credit-link" href="https://anatomyqa.com/carotid-triangle-boundaries-contents/"
+               target="_blank" rel="noopener">anatomyqa.com — Carotid triangle</a>
+          </div>
+          <div class="credit-item">
+            <div class="role">Missões 02 e 03 — Ilustrações das artérias</div>
+            <div class="name">Letícia Maria Nunes Pinto</div>
+            <div class="mat">2421032</div>
+          </div>
+        </div>
+
+        <p class="text-muted" style="font-size:12px;line-height:1.6;margin-top:14px">
+          Projeto de monitoria interdisciplinar — Morfologia Bucomaxilofacial II<br/>
+          Universidade de Fortaleza (UNIFOR).
         </p>
+
         <div class="popup-actions">
           <button class="btn btn-ghost btn-sm" onclick="closeOverlay('overlay-credits')">Fechar</button>
         </div>
@@ -362,11 +399,7 @@ function buildApp() {
             title="Fechar">✕</button>
         </div>
         <div class="popup-body" id="puzzle-q-body"></div>
-        <div id="puzzle-q-img-wrap" style="display:none;margin-bottom:14px;border-radius:10px;overflow:hidden;height:140px;background:var(--surface2)">
-          <img id="puzzle-q-img" src="" alt="Diagrama anatômico"
-            style="width:100%;height:100%;object-fit:cover;object-position:50% 50%;
-                   filter:brightness(0.85) contrast(1.1);transform-origin:center;transition:object-position 0.3s"/>
-        </div>
+
         <div class="answer-input-wrap" id="puzzle-q-input-wrap">
           <input class="answer-input" id="puzzle-q-input" type="text" placeholder="Digite o nome..." autocomplete="off" />
           <button class="btn btn-primary btn-sm" id="puzzle-q-submit">OK</button>
@@ -437,10 +470,10 @@ function renderPhase1() {
   const el = document.getElementById('screen-phase1');
   if (STATE.phase1Step === 0) {
     // Step 0: image + text input side by side
-    el.innerHTML = createHUD('FASE 01 · Trígono Carotídeo', 'Passo 1 / 2', "showScreen('screen-home')") + `
+    el.innerHTML = createHUD('MISSÃO 01 · Reconhecimento Anatômico', 'Passo 1 / 2', "showScreen('screen-home')") + `
       <div class="game-wrap" style="overflow-y:auto">
         <div class="anatomy-stage" id="p1-stage" style="max-width:600px;margin:0 auto 16px">
-          ${buildNeckSVG()}
+          ${buildNeckDiagram()}
         </div>
         <div class="question-panel" id="p1-question" style="max-width:600px;margin:0 auto">
           ${renderP1Q1()}
@@ -450,7 +483,7 @@ function renderPhase1() {
     attachP1Q1Events();
   } else {
     // Step 1: muscles — full width layout, image small + checkboxes
-    el.innerHTML = createHUD('FASE 01 · Trígono Carotídeo', 'Passo 2 / 2', "showScreen('screen-home')") + `
+    el.innerHTML = createHUD('MISSÃO 01 · Reconhecimento Anatômico', 'Passo 2 / 2', "showScreen('screen-home')") + `
       <div class="game-wrap" style="overflow-y:auto;max-width:700px;margin:0 auto;width:100%">
         <!-- Small reference image -->
         <div style="max-width:360px;margin:0 auto 16px;position:relative;line-height:0;border-radius:10px;overflow:hidden">
@@ -470,22 +503,33 @@ function renderPhase1() {
 // Detailed anatomical neck diagram
 // ─── IMAGE CONFIG ──────────────────────────────────────────────
 // Coloque suas imagens na pasta img/ do repositório.
-// Se o arquivo não existir, o diagrama SVG original é exibido automaticamente.
+// Se o arquivo não existir, uma mensagem de erro é exibida.
 // ── IMAGENS DIDÁTICAS ─────────────────────────────────────────
 // Fonte: Anatomy QA (anatomyqa.com) — uso educacional.
 // Para imagens próprias, troque as URLs por caminhos locais (ex: 'img/neck_triangle.png').
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  CONFIGURAÇÃO DE IMAGENS                                         ║
+// ║  Todos os arquivos ficam na pasta  img/  do repositório.          ║
+// ║  Para trocar uma imagem, basta editar o nome do arquivo abaixo.   ║
+// ╚══════════════════════════════════════════════════════════════════╝
 const IMAGES = {
-  // Fase 1 – Trígono Carotídeo: limites do triângulo
+  // ── MISSÃO 01 — Trígono Carotídeo ──────────────────────────────
+  // Imagem do pescoço com o triângulo carotídeo em destaque.
+  // Fonte online (funciona sem baixar nada):
   neck_triangle: 'https://anatomyqa.com/wp-content/uploads/2018/05/Carotid-triangle.jpg',
-  // Fase 1 – Músculos: conteúdo do triângulo carotídeo
-  neck_muscles: 'https://anatomyqa.com/wp-content/uploads/2018/05/carotid-triangle-contents.png',
-  // Fase 2 – Modelo em argila da árvore carotídea (sem texto)
-  carotid_tree: 'carotid_model.png',
-  // Fase 3 – imagens de contexto para cada ramo (mesma imagem da fase 2, recortada via CSS)
-  branch_lin: 'https://www.anatomyqa.com/wp-content/uploads/2018/05/external-carotid-artery.png',
-  branch_fac: 'https://www.anatomyqa.com/wp-content/uploads/2018/05/external-carotid-artery.png',
-  branch_max: 'https://anatomyqa.com/wp-content/uploads/2018/05/Maxillary-artery.png',
-  branch_tmp: 'https://www.anatomyqa.com/wp-content/uploads/2018/05/external-carotid-artery.png',
+  neck_muscles:  'https://anatomyqa.com/wp-content/uploads/2018/05/Carotid-triangle.jpg',
+  // Se quiser usar um arquivo local, salve-o como img/trigono.png e troque para:
+  //   neck_triangle: 'img/trigono.png',
+
+  // ── MISSÃO 02 — Árvore Carotídea (quebra-cabeça) ──────────────
+  // Imagem de referência do quebra-cabeça montado:
+  carotid_tree: 'img/Carotida_comum_completa.png',
+
+  // ── MISSÃO 03 — Ramos (imagem de contexto de cada ramo) ────────
+  branch_lin: 'img/A__Lingual_inicial.png',
+  branch_fac: 'img/Facial_completa.png',
+  branch_max: 'img/Alveolar_inferior.png',
+  branch_tmp: 'img/Facial_transversa.png',
 };
 
 // Zoom/crop config por ramo: [object-position CSS] para destacar a área certa
@@ -496,114 +540,60 @@ const BRANCH_IMG_FOCUS = {
   tmp: { src: 'branch_tmp', pos: '50% 20%', scale: '180%' },
 };
 
-// Cache de quais imagens existem (testado uma vez por sessão)
-const IMG_EXISTS = {};
-function checkImg(src, cb) {
-  if (src in IMG_EXISTS) { cb(IMG_EXISTS[src]); return; }
-  const t = new Image();
-  t.onload  = () => { IMG_EXISTS[src] = true;  cb(true);  };
-  t.onerror = () => { IMG_EXISTS[src] = false; cb(false); };
-  t.src = src;
-}
 
-function buildNeckSVG() {
+function buildNeckDiagram() {
   const zoomed = STATE.phase1Step > 0;
-  // Always use neck_triangle image for both steps - same image, different overlay
   const imgSrc = IMAGES.neck_triangle;
 
-  // Image native dimensions: 406x249 — use these as viewBox for pixel-perfect overlay
-  const VW = 406, VH = 249;
-  const AR = VW / VH; // 1.630
+  // Retângulos que cobrem os rótulos em inglês da imagem original.
+  // Posições em % do container (calibradas para Carotid-triangle.jpg).
+  const COVERS = [
+    { l: 74.0, t: 20.0, w: 26.0, h:  8.5 },  // Stylohyoid
+    { l: 74.0, t: 31.0, w: 26.0, h:  8.5 },  // Digastric
+    { l: 69.0, t: 45.0, w: 31.0, h:  8.5 },  // SCM
+    { l:  0.0, t: 40.0, w: 29.0, h:  8.5 },  // Hyoid bone
+    { l:  0.0, t: 49.0, w: 29.0, h:  8.5 },  // Carotid triangle
+    { l:  0.0, t: 60.0, w: 29.0, h:  8.5 },  // Omohyoid
+  ];
+  const coversHtml = COVERS.map(function(c) {
+    return '<div style="position:absolute;left:' + c.l + '%;top:' + c.t + '%;' +
+      'width:' + c.w + '%;height:' + c.h + '%;background:#efeae2;pointer-events:none"></div>';
+  }).join('');
 
-  // ── Label cover rectangles (color matches image cream background #cec6b5) ──
-  // Only shown when image is present
-  const labelCovers = `
-    <rect x="260" y="51"  width="146" height="15" fill="#cec6b5"/>
-    <rect x="265" y="79"  width="141" height="15" fill="#cec6b5"/>
-    <rect x="254" y="146" width="152" height="15" fill="#cec6b5"/>
-    <rect x="70"  y="139" width="100" height="15" fill="#cec6b5"/>
-    <rect x="0"   y="126" width="170" height="16" fill="#cec6b5"/>
-    <rect x="65"  y="158" width="118" height="15" fill="#cec6b5"/>
-    <rect x="68"  y="178" width="88"  height="15" fill="#cec6b5"/>`;
+  // Destaque do trígono só aparece depois de responder (passo 2)
+  const triHtml = zoomed
+    ? '<div style="position:absolute;left:40%;top:34%;width:19%;height:32%;' +
+        'background:rgba(200,86,58,0.28);border:2px solid #c8563a;border-radius:4px;' +
+        'pointer-events:none"></div>' +
+      '<div style="position:absolute;left:49.5%;top:44%;transform:translateX(-50%);' +
+        'background:rgba(10,10,15,0.88);border-radius:6px;padding:5px 10px;pointer-events:none;' +
+        'font-family:Raleway,sans-serif;font-size:10px;font-weight:800;color:#ffcabb;' +
+        'text-align:center;line-height:1.25;white-space:nowrap">TRÍGONO<br/>CAROTÍDEO</div>'
+    : '';
 
-  // ── Red triangle vertices (measured on 406x249 source) ──
-  // The red outlined triangle in the image: 
-  //   upper-left near posterior digastric: (245, 80)
-  //   upper-right near SCM:               (302, 96)
-  //   bottom near omohyoid/hyoid:          (258, 166)
-  const TRI = '245,80 302,96 258,166';
-  const TX = 268, TY = 116; // centroid
+  // Caixa de pergunta (só no passo 1)
+  const calloutHtml = zoomed ? '' :
+    '<div style="position:absolute;right:3%;top:4%;background:rgba(13,17,23,0.94);' +
+      'border:2px solid #c8563a;border-radius:8px;padding:7px 11px;pointer-events:none;' +
+      'font-family:Raleway,sans-serif;font-size:10px;font-weight:800;color:#c8563a;' +
+      'text-align:center;line-height:1.3">Qual região<br/>é esta? ↓</div>';
 
-  const overlaySVG = (withBg) => `
-  <svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg"
-    style="position:${withBg ? 'absolute' : 'static'};top:0;left:0;width:100%;height:100%">
-
-    ${withBg ? '' : `
-    <!-- ── SVG FALLBACK (no image) ── -->
-    <rect width="${VW}" height="${VH}" fill="#0d1117"/>
-    <ellipse cx="200" cy="100" rx="60" ry="75" fill="#1e130a" stroke="#2a1e14" stroke-width="1"/>
-    <path d="M155,145 Q165,175 170,185 L235,185 Q238,175 248,145" fill="#17100a" stroke="#241a12" stroke-width="1"/>
-    <path d="M145,175 Q165,195 200,200 Q235,195 255,175" stroke="#2e1f14" stroke-width="1.5" fill="none"/>
-    <path d="M148,200 Q150,180 155,165 Q160,148 160,135" stroke="#c8563a" stroke-width="3" fill="none" opacity="0.75"/>
-    <path d="M255,200 Q253,180 250,165 Q245,148 246,135" stroke="#c8563a" stroke-width="3" fill="none" opacity="0.75"/>
-    <path d="M250,145 Q235,143 220,143 Q205,143 192,145" stroke="#e8956d" stroke-width="2" fill="none" opacity="0.7"/>
-    <path d="M275,180 Q255,170 235,167 Q210,164 192,167" stroke="#d4a843" stroke-width="2" fill="none" opacity="0.65"/>
-    <path d="M200,200 Q200,180 200,165 Q200,152 200,140" stroke="#e8273a" stroke-width="2.5" fill="none" opacity="0.85"/>
-    `}
-
-    ${withBg ? labelCovers : ''}
-
-    ${zoomed ? `
-    <!-- Step 1: show filled triangle + label -->
-    <polygon points="${TRI}" fill="rgba(200,86,58,0.35)" stroke="#c8563a" stroke-width="2.5"/>
-    <rect x="${TX-52}" y="${TY-18}" width="104" height="38" rx="5" fill="rgba(10,10,15,0.82)"/>
-    <text x="${TX}" y="${TY}" font-family="Raleway,sans-serif" font-size="10" fill="#ffcabb"
-      text-anchor="middle" font-weight="800">TRÍGONO</text>
-    <text x="${TX}" y="${TY+13}" font-family="Raleway,sans-serif" font-size="10" fill="#ffcabb"
-      text-anchor="middle" font-weight="800">CAROTÍDEO</text>
-    ` : `
-    <!-- Step 0: callout top-right in red, no triangle overlay -->
-    <!-- Arrow from callout to the red triangle in image -->
-    <line x1="314" y1="50" x2="${TX+10}" y2="${TY-8}" stroke="#c8563a" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.9"/>
-    <!-- Callout box top-right -->
-    <rect x="306" y="8" width="96" height="40" rx="7" fill="rgba(13,17,23,0.93)" stroke="#c8563a" stroke-width="1.8"/>
-    <text x="354" y="25" font-family="Raleway,sans-serif" font-size="9.5" fill="#c8563a" text-anchor="middle" font-weight="800">Qual região</text>
-    <text x="354" y="39" font-family="Raleway,sans-serif" font-size="9.5" fill="#c8563a" text-anchor="middle" font-weight="800">é esta? ↓</text>
-    `}
-
-    <!-- ── LEGENDA ── -->
-    <g transform="translate(4,${VH - (zoomed ? 58 : 76)})">
-      <rect width="148" height="${zoomed ? 54 : 72}" rx="5" fill="rgba(10,12,17,0.90)" stroke="#30363d" stroke-width="1"/>
-      <text x="7" y="12" font-family="Raleway,sans-serif" font-size="6" fill="#8b949e" font-weight="700" letter-spacing="0.12em">LEGENDA</text>
-      <line x1="7" y1="20" x2="20" y2="20" stroke="#c8563a" stroke-width="2"/>
-      <text x="25" y="23" font-family="Raleway,sans-serif" font-size="6.5" fill="#e6edf3">M. Esternocleidomastoide</text>
-      <line x1="7" y1="31" x2="20" y2="31" stroke="#e8956d" stroke-width="2"/>
-      <text x="25" y="34" font-family="Raleway,sans-serif" font-size="6.5" fill="#e6edf3">V. Post. M. Digástrico</text>
-      ${zoomed ? '' : `
-      <line x1="7" y1="42" x2="20" y2="42" stroke="#d4a843" stroke-width="2"/>
-      <text x="25" y="45" font-family="Raleway,sans-serif" font-size="6.5" fill="#e6edf3">M. Omohióideo</text>
-      <line x1="7" y1="53" x2="20" y2="53" stroke="#e8273a" stroke-width="2"/>
-      <text x="25" y="56" font-family="Raleway,sans-serif" font-size="6.5" fill="#e6edf3">A. Carótida Comum</text>
-      `}
-    </g>
-  </svg>`;
-
-  const ar = VW / VH;
-  checkImg(imgSrc, (exists) => {
-    const target = document.getElementById('neck-diagram-container');
-    if (!target) return;
-    if (exists) {
-      target.innerHTML = `
-        <img src="${imgSrc}" alt="Diagrama anatômico"
-          style="width:100%;display:block;border-radius:10px;
-                 filter:brightness(0.86) contrast(1.08)"/>
-        ${overlaySVG(true)}`;
-    } else {
-      target.innerHTML = overlaySVG(false);
-    }
-  });
-
-  return `<div id="neck-diagram-container" style="position:relative;width:100%;max-width:600px;margin:0 auto;line-height:0">${overlaySVG(false)}</div>`;
+  return '<div id="neck-diagram-container" ' +
+      'style="position:relative;width:100%;max-width:600px;margin:0 auto;line-height:0;' +
+        'border-radius:10px;overflow:hidden;background:var(--surface2);min-height:180px">' +
+      '<img src="' + imgSrc + '" alt="Diagrama anatômico" ' +
+        'style="width:100%;display:block" ' +
+        'onerror="this.style.display=\'none\';' +
+          'this.parentElement.querySelector(\'.no-img-msg\').style.display=\'flex\'"/>' +
+      '<div class="no-img-msg" style="display:none;position:absolute;inset:0;' +
+        'align-items:center;justify-content:center;flex-direction:column;gap:6px;' +
+        'font-family:Raleway,sans-serif;font-size:11px;color:var(--text-muted);' +
+        'line-height:1.5;text-align:center;padding:20px">' +
+        '<span style="font-size:26px">🖼️</span>' +
+        '<span>Imagem não encontrada</span>' +
+      '</div>' +
+      coversHtml + triHtml + calloutHtml +
+    '</div>';
 }
 
 function renderP1Q1() {
@@ -617,7 +607,7 @@ function renderP1Q1() {
         style="text-transform:uppercase"/>
       <button class="btn btn-primary btn-sm" id="p1-submit">OK</button>
     </div>
-    <p class="text-muted mt-8" style="font-size:11px">⚠ Resposta em MAIÚSCULAS sem acentos. Ex: TRIGONO CAROTIDEO</p>`;
+    <p class="text-muted mt-8" style="font-size:11px">⚠ Resposta em MAIÚSCULAS e sem acentos.</p>`;
 }
 
 function attachP1Q1Events() {
@@ -708,8 +698,37 @@ function attachP1Q2Events() {
 
 // ─── PHASE 2 ─────────────────────────────────────────────────
 
+// Phase 2 piece images mapped to each slot
+// Peças da Missão 02 — cada cor corresponde a uma artéria.
+// x/y/w/h = posição da peça sobre a imagem de referência (em %).
+const P2_PIECES = {
+  acc: { img:'Carotida_comum_inicial.png',  label:'A. CAROTIDA COMUM',       cor:'vermelho',    x:12.4, y:68.4, w:37.1, h:30.2 },
+  ci:  { img:'Carotida_interna.png',        label:'A. CAROTIDA INTERNA',     cor:'azul',        x:5.1, y:53.8, w:31.9, h:16.2 },
+  ce:  { img:'Carotida_externa.png',        label:'A. CAROTIDA EXTERNA',     cor:'laranja',     x:23.8, y:5.3, w:50.6, h:86.3 },
+  tis: { img:'Tireoidea_superior.png',      label:'A. TIREOIDEA SUPERIOR',   cor:'roxo',        x:51.2, y:54.9, w:37.4, h:14.1 },
+  lin: { img:'Lingual.png',                 label:'A. LINGUAL',              cor:'rosa',        x:60.7, y:44.4, w:28.9, h:3.9 },
+  fac: { img:'Facial.png',                  label:'A. FACIAL',               cor:'ciano',       x:61.8, y:34.9, w:31.5, h:6.6 },
+  pha: { img:'Faringea_ascendente.png',     label:'A. FARINGEA ASCENDENTE',  cor:'oliva',       x:65.5, y:25.5, w:14.1, h:19.2 },
+  occ: { img:'Occipital.png',               label:'A. OCCIPITAL',            cor:'verde-escuro',x:16.4, y:6.1, w:44.6, h:19.8 },
+  aup: { img:'Auricular_posterior.png',     label:'A. AURICULAR POSTERIOR',  cor:'verde',       x:31.3, y:4.6, w:34.2, h:12.6 },
+  max: { img:'Maxilar.png',                 label:'A. MAXILAR',              cor:'vinho',       x:72.9, y:4.0, w:24.1, h:5.4 },
+  tmp: { img:'Temporal_superficial.png',    label:'A. TEMPORAL SUPERFICIAL', cor:'dourado',     x:69.5, y:0.9, w:6.3, h:4.3 },
+};
+
+// Agrupa as peças por cor. Quando todas as peças de um grupo estiverem
+// posicionadas, o sistema pergunta o nome da artéria.
+const P2_GRUPOS = (function() {
+  const g = {};
+  Object.keys(P2_PIECES).forEach(function(id) {
+    const c = P2_PIECES[id].cor;
+    (g[c] = g[c] || []).push(id);
+  });
+  return g;
+})();
+
 function initPhase2() {
-  STATE.phase2Placed = new Set();
+  STATE.phase2Placed = new Set();        // artérias já nomeadas
+  STATE.phase2Posicionadas = new Set();  // peças já soltas no tabuleiro
   showScreen('screen-phase2');
   renderPhase2();
 }
@@ -717,110 +736,124 @@ function initPhase2() {
 function renderPhase2() {
   const el = document.getElementById('screen-phase2');
   const placed = STATE.phase2Placed;
-
-  // Build numbered marker SVG overlay (string concat to avoid nested template literals)
-  const m1 = placed.has('tmp') ?  '<circle cx="431" cy="181" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="431" y="181" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">1</text>' :  '<circle cx="431" cy="181" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="431" y="181" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">1</text>';
-  const m2 = placed.has('max') ?  '<circle cx="670" cy="675" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="670" y="675" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">2</text>' :  '<circle cx="670" cy="675" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="670" y="675" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">2</text>';
-  const m3 = placed.has('aup') ?  '<circle cx="699" cy="819" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="699" y="819" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">3</text>' :  '<circle cx="699" cy="819" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="699" y="819" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">3</text>';
-  const m4 = placed.has('occ') ?  '<circle cx="243" cy="520" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="243" y="520" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">4</text>' :  '<circle cx="243" cy="520" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="243" y="520" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">4</text>';
-  const m5 = placed.has('fac') ?  '<circle cx="236" cy="597" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="236" y="597" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">5</text>' :  '<circle cx="236" cy="597" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="236" y="597" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">5</text>';
-  const m6 = placed.has('pha') ?  '<circle cx="566" cy="654" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="566" y="654" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">6</text>' :  '<circle cx="566" cy="654" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="566" y="654" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">6</text>';
-  const m7 = placed.has('lin') ?  '<circle cx="381" cy="904" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="381" y="904" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">7</text>' :  '<circle cx="381" cy="904" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="381" y="904" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">7</text>';
-  const m8 = placed.has('ce') ?  '<circle cx="472" cy="465" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="472" y="465" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">8</text>' :  '<circle cx="472" cy="465" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="472" y="465" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">8</text>';
-  const m9 = placed.has('ci') ?  '<circle cx="464" cy="753" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="464" y="753" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">9</text>' :  '<circle cx="464" cy="753" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="464" y="753" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">9</text>';
-  const m10 = placed.has('tis') ?  '<circle cx="375" cy="801" r="22" fill="#3fb950" stroke="#fff" stroke-width="3" opacity="0.95"/>'  + '<text x="375" y="801" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">10</text>' :  '<circle cx="375" cy="801" r="22" fill="rgba(180,55,35,0.92)" stroke="#fff" stroke-width="3"/>'  + '<text x="375" y="801" font-family="Raleway,sans-serif" font-size="18" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">10</text>';
-  const markerSVG = '<svg viewBox="0 0 960 1280" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">' +
-    '<g>' + m1 + '</g><g>' + m2 + '</g><g>' + m3 + '</g><g>' + m4 + '</g><g>' + m5 + '</g>' +
-    '<g>' + m6 + '</g><g>' + m7 + '</g><g>' + m8 + '</g><g>' + m9 + '</g><g>' + m10 + '</g>' +
-    '</svg>';;
-
-  // Build card grid for each slot
-  const slotOrder = [
-    {id:'tmp', num:1,  label:'A. TEMPORAL SUPERFICIAL', type:'Ramo terminal'},
-    {id:'max', num:2,  label:'A. MAXILAR',              type:'Ramo terminal'},
-    {id:'aup', num:3,  label:'A. AURICULAR POSTERIOR',  type:'Ramo posterior'},
-    {id:'occ', num:4,  label:'A. OCCIPITAL',            type:'Ramo posterior'},
-    {id:'fac', num:5,  label:'A. FACIAL',               type:'Ramo anterior'},
-    {id:'pha', num:6,  label:'A. FARINGEA ASCENDENTE',  type:'Ramo medial'},
-    {id:'lin', num:7,  label:'A. LINGUAL',              type:'Ramo anterior'},
-    {id:'ce',  num:8,  label:'A. CAROTIDA EXTERNA',     type:'Bifurcação'},
-    {id:'ci',  num:9,  label:'A. CAROTIDA INTERNA',     type:'Bifurcação'},
-    {id:'tis', num:10, label:'A. TIREOIDEA SUPERIOR',   type:'Ramo anterior'},
-  ];
-
-  const cards = slotOrder.map(s => {
-    const done = placed.has(s.id);
-    const clickAttr = !done ? 'onclick="openP2Q(\'' + s.id + '\')"' : '';
-    const numClass = 'p2-card-num' + (done ? ' p2-card-num-done' : '');
-    const cardClass = 'p2-card' + (done ? ' p2-card-done' : '');
-    const checkHtml = done ? '<div class="p2-card-check">✓</div>' : '';
-    return '<div class="' + cardClass + '" ' + clickAttr + ' title="' + (done ? s.label : 'Clique para identificar') + '">' +
-      '<div class="' + numClass + '">' + s.num + '</div>' +
-      '<div class="p2-card-info">' +
-        '<div class="p2-card-type">' + s.type + '</div>' +
-        '<div class="p2-card-label">' + (done ? s.label : '???') + '</div>' +
-      '</div>' + checkHtml +
+  const total = ARTERY_SLOTS.length;
+  el.innerHTML = createHUD('MISSÃO 02 · Árvore Carotídea',
+    placed.size + '/' + total + ' artérias', "showScreen('screen-home')") +
+    '<div class="game-wrap" style="overflow-y:auto;padding-bottom:8px">' +
+      '<div id="p2-puzzle-root"></div>' +
     '</div>';
+  updateHUD();
+  buildP2Puzzle();
+}
+
+// ── Drag & Drop Puzzle engine ─────────────────────────────────────────────
+
+
+let p2DragId = null;  // id of piece being dragged
+
+function buildP2Puzzle() {
+  const posic = STATE.phase2Posicionadas;   // peças soltas no tabuleiro
+  const root  = document.getElementById('p2-puzzle-root');
+  if (!root) return;
+
+  const ids = Object.keys(P2_PIECES);
+  const naBandeja = ids.filter(function(id){ return !posic.has(id); });
+
+  // ── bandeja lateral esquerda, rolável ──────────────────────────
+  const bandeja =
+    '<aside id="p2-bandeja">' +
+      '<div class="p2-bandeja-cab">Peças<span>' + naBandeja.length + '</span></div>' +
+      '<div class="p2-bandeja-lista">' +
+        (naBandeja.length === 0
+          ? '<p class="p2-bandeja-vazia">Todas as peças<br/>foram usadas</p>'
+          : naBandeja.map(function(id) {
+              const p = P2_PIECES[id];
+              return '<div class="p2-piece" data-piece="' + id + '" draggable="true" ' +
+                       'title="Arraste para o tabuleiro">' +
+                       '<img src="img/' + p.img + '" draggable="false" alt=""/>' +
+                     '</div>';
+            }).join('')
+        ) +
+      '</div>' +
+    '</aside>';
+
+  // ── tabuleiro ──────────────────────────────────────────────────
+  // Cada peça encaixada é uma máscara do MESMO tamanho da referência,
+  // então o encaixe é pixel-perfeito e as peças nunca se sobrepõem.
+  const pecas = ids.filter(function(id){ return posic.has(id); }).map(function(id) {
+    const resolvido = STATE.phase2Placed.has(id);
+    return '<img src="img/p2_' + id + '.png" alt="" draggable="false" ' +
+      'class="p2-fitted' + (resolvido ? ' p2-ok' : '') + '"/>';
   }).join('');
 
-  el.innerHTML = createHUD('FASE 02 · Quebra-cabeça da Carótida', `${placed.size}/${ARTERY_SLOTS.length} peças`, "showScreen('screen-home')") + `
-    <div class="game-wrap" style="overflow-y:auto;gap:12px">
-      <!-- Image with numbered markers -->
-      <div id="carotid-tree-container" style="position:relative;width:100%;max-width:500px;margin:0 auto;border-radius:12px;overflow:hidden;background:var(--surface);flex-shrink:0">
-        <div id="p2-img-placeholder" style="height:160px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px">
-          Carregando imagem...
-        </div>
-      </div>
-      <!-- Card grid -->
-      <div class="p2-card-grid">${cards}</div>
-    </div>`;
+  const tabuleiro =
+    '<div id="p2-tabuleiro">' +
+      '<div id="p2-drop-area">' +
+        '<img class="p2-guia" src="img/Carotida_comum_completa.png" alt="" draggable="false"/>' +
+        pecas +
+      '</div>' +
+      '<p class="p2-dica">Arraste as peças da esquerda para o tabuleiro.<br/>' +
+        'Cada peça encaixa sozinha no lugar certo.</p>' +
+    '</div>';
 
-  updateHUD();
+  root.innerHTML = '<div id="p2-layout">' + bandeja + tabuleiro + '</div>';
+  attachP2Events();
+}
 
-  // Load image
-  checkImg(IMAGES.carotid_tree, (exists) => {
-    const target = document.getElementById('carotid-tree-container');
-    if (!target) return;
-    if (exists) {
-      target.style.cssText = 'width:100%;max-width:440px;margin:0 auto;line-height:0';
-      target.innerHTML = `
-        <div style="position:relative;display:inline-block;width:100%;line-height:0;border-radius:12px;overflow:hidden">
-          <img src="${IMAGES.carotid_tree}" alt="Modelo da carótida"
-            style="width:100%;height:auto;display:block;border-radius:12px;max-height:62vh;object-fit:cover;object-position:center 45%"/>
-          <svg viewBox="0 100 960 1070" xmlns="http://www.w3.org/2000/svg"
-            style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">
-            ${markerSVG.replace('<svg viewBox="0 0 960 1280" xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">','').replace('</svg>','')}
-          </svg>
-        </div>`;
-    } else {
-      target.innerHTML = buildCarotidFallbackSVG(placed);
-      target.style.background = 'transparent';
-    }
+function attachP2Events() {
+  const limparSel = function() {
+    document.querySelectorAll('.p2-piece').forEach(function(p){ p.classList.remove('p2-selected'); });
+  };
+
+  document.querySelectorAll('.p2-piece').forEach(function(peca) {
+    peca.addEventListener('dragstart', function() {
+      p2DragId = peca.dataset.piece;
+      peca.classList.add('p2-dragging');
+    });
+    peca.addEventListener('dragend', function() {
+      peca.classList.remove('p2-dragging');
+    });
+    peca.addEventListener('click', function() {
+      const jaSel = peca.classList.contains('p2-selected');
+      limparSel();
+      if (jaSel) { p2DragId = null; return; }
+      p2DragId = peca.dataset.piece;
+      peca.classList.add('p2-selected');
+    });
+  });
+
+  const area = document.getElementById('p2-drop-area');
+  if (!area) return;
+  area.addEventListener('dragover',  function(e){ e.preventDefault(); area.classList.add('p2-area-hover'); });
+  area.addEventListener('dragleave', function(){ area.classList.remove('p2-area-hover'); });
+  area.addEventListener('drop', function(e) {
+    e.preventDefault();
+    area.classList.remove('p2-area-hover');
+    if (p2DragId) soltarPeca(p2DragId);
+  });
+  area.addEventListener('click', function() {
+    if (p2DragId) soltarPeca(p2DragId);
   });
 }
 
-function buildCarotidFallbackSVG(placed) {
-  // Simple schematic tree for when image is unavailable
-  return `<svg viewBox="0 0 460 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:460px">
-    <rect width="460" height="520" fill="#0d1117" rx="14"/>
-    <line x1="230" y1="515" x2="230" y2="400" stroke="#c8563a" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
-    <text x="265" y="510" font-family="Raleway,sans-serif" font-size="7" fill="#8b949e" font-weight="700">A. CAROTIDA COMUM</text>
-    <circle cx="230" cy="398" r="5" fill="#c8563a" opacity="0.8"/>
-    <line x1="230" y1="398" x2="150" y2="355" stroke="#58a6ff" stroke-width="2.5" opacity="0.7"/>
-    <line x1="230" y1="398" x2="280" y2="360" stroke="#c8563a" stroke-width="2.5" opacity="0.7"/>
-    <line x1="280" y1="360" x2="280" y2="80" stroke="#c8563a" stroke-width="2" opacity="0.45"/>
-    <line x1="280" y1="310" x2="180" y2="310" stroke="#c8563a" stroke-width="1.5" opacity="0.4"/>
-    <line x1="280" y1="260" x2="180" y2="260" stroke="#c8563a" stroke-width="1.5" opacity="0.4"/>
-    <line x1="280" y1="200" x2="180" y2="200" stroke="#c8563a" stroke-width="1.5" opacity="0.4"/>
-    <line x1="280" y1="340" x2="370" y2="340" stroke="#c8563a" stroke-width="1.5" opacity="0.4"/>
-    <line x1="280" y1="290" x2="370" y2="290" stroke="#c8563a" stroke-width="1.5" opacity="0.4"/>
-    <line x1="280" y1="230" x2="370" y2="230" stroke="#c8563a" stroke-width="1.5" opacity="0.4"/>
-    <line x1="280" y1="80" x2="230" y2="50" stroke="#c8563a" stroke-width="2" opacity="0.5"/>
-    <line x1="280" y1="80" x2="330" y2="50" stroke="#c8563a" stroke-width="2" opacity="0.5"/>
-    <text x="230" y="30" font-family="Raleway,sans-serif" font-size="6" fill="#30363d" text-anchor="middle">TERMINAIS</text>
-    <text x="25" y="260" font-family="Raleway,sans-serif" font-size="6" fill="#30363d" transform="rotate(-90,25,260)">ANTERIORES</text>
-    <text x="435" y="290" font-family="Raleway,sans-serif" font-size="6" fill="#30363d" transform="rotate(90,435,290)">POST./MEDIAL</text>
-  </svg>`;
+// Solta a peça: ela encaixa sozinha na posição correta.
+// Quando TODAS as peças da mesma cor estiverem no tabuleiro,
+// o sistema pergunta o nome da artéria.
+function soltarPeca(pieceId) {
+  const p = P2_PIECES[pieceId];
+  if (!p || STATE.phase2Posicionadas.has(pieceId)) return;
+
+  p2DragId = null;
+  STATE.phase2Posicionadas.add(pieceId);
+  buildP2Puzzle();
+
+  const grupo = P2_GRUPOS[p.cor] || [pieceId];
+  const completo = grupo.every(function(id){ return STATE.phase2Posicionadas.has(id); });
+  const jaRespondido = grupo.every(function(id){ return STATE.phase2Placed.has(id); });
+
+  if (completo && !jaRespondido) {
+    setTimeout(function(){ openP2Q(pieceId); }, 420);
+  }
 }
 
 // ── Phase 2 dropdown popup ──────────────────────────────────
@@ -828,6 +861,25 @@ function buildCarotidFallbackSVG(placed) {
 let p2DropdownOpen = false;
 let p2CurrentSlotId = null;
 let p2SelectedValue = null;
+
+// Ao completar o quebra-cabeça: leve zoom-out revelando a artéria completa.
+function animarConclusaoP2() {
+  const area = document.getElementById('p2-drop-area');
+  if (!area) { setTimeout(function(){ completePhase(2); }, 400); return; }
+
+  // troca as peças pela imagem completa em cores plenas
+  area.classList.add('p2-concluido');
+  area.innerHTML =
+    '<img class="p2-final" src="img/Carotida_comum_completa.png" alt="Árvore carotídea completa"/>' +
+    '<div class="p2-final-tag">Árvore carotídea completa</div>';
+
+  const dica = document.querySelector('.p2-dica');
+  if (dica) dica.textContent = 'Todas as artérias identificadas!';
+  const bandeja = document.getElementById('p2-bandeja');
+  if (bandeja) bandeja.classList.add('p2-bandeja-off');
+
+  setTimeout(function(){ completePhase(2); }, 2600);
+}
 
 window.openP2Q = function(slotId) {
   if (STATE.phase2Placed.has(slotId)) return;
@@ -840,6 +892,7 @@ window.openP2Q = function(slotId) {
 
   // Determine context label for body
   const bodyLabels = {
+    acc: 'Tronco de origem, antes da bifurcação:',
     ci: 'Bifurcação esquerda — ramificação interna:',
     ce: 'Bifurcação direita — ramificação externa:',
     tis: 'Ramo colateral anterior da carótida externa:',
@@ -916,15 +969,25 @@ function submitP2Answer() {
     document.getElementById('p2q-next-wrap').style.display = 'flex';
     document.getElementById('p2q-next').onclick = () => {
       closeOverlay('overlay-p2-q');
-      STATE.phase2Placed.add(p2CurrentSlotId);
+      const grupo = P2_GRUPOS[P2_PIECES[p2CurrentSlotId].cor] || [p2CurrentSlotId];
+      grupo.forEach(function(id){ STATE.phase2Placed.add(id); });
       renderPhase2();
-      if (STATE.phase2Placed.size === ARTERY_SLOTS.length) setTimeout(() => completePhase(2), 600);
+      if (STATE.phase2Placed.size === ARTERY_SLOTS.length) animarConclusaoP2();
     };
   } else {
     fb.className = 'feedback show error';
     fb.textContent = `❌ Incorreto. A resposta é: ${slot.label}`;
     const dead = loseLife(() => { closeOverlay('overlay-p2-q'); initPhase2(); });
     if (!dead) {
+      // devolve as peças daquela cor para a bandeja
+      const grupo = P2_GRUPOS[P2_PIECES[p2CurrentSlotId].cor] || [p2CurrentSlotId];
+      setTimeout(function() {
+        grupo.forEach(function(id){ STATE.phase2Posicionadas.delete(id); });
+        closeOverlay('overlay-p2-q');
+        renderPhase2();
+      }, 2600);
+    }
+    if (false) {
       setTimeout(() => {
         p2SelectedValue = null;
         document.getElementById('p2q-select-label').textContent = 'Selecione uma artéria...';
@@ -990,11 +1053,13 @@ window.openBranch = function(bid) {
 };
 
 // Branch image config: src image + viewBox crop (x y w h) for each branch
+// Imagem de referência mostrada no topo de cada ramo (Missão 03).
+// Usa as peças do quebra-cabeça que você já tem em img/.
 const BRANCH_ZOOM_IMGS = {
-  lin: { src:'branch_lingual_facial.png', vb:'0 0 1283 1404',     ratio:1.095 },
-  fac: { src:'branch_lingual_facial.png', vb:'1283 0 1283 1404',  ratio:1.095 },
-  max: { src:'branch_maxilar.png',        vb:'0 0 2272 1390',      ratio:0.612 },
-  tmp: { src:'branch_temporal.jpg',       vb:'0 0 1280 1269',      ratio:0.991 },
+  lin: { src: IMAGES.branch_lin },
+  fac: { src: IMAGES.branch_fac },
+  max: { src: IMAGES.branch_max },
+  tmp: { src: IMAGES.branch_tmp },
 };
 
 function showBranchZoom(bid) {
@@ -1005,112 +1070,75 @@ function showBranchZoom(bid) {
   const arteries = b.arteries;
   const cfg = BRANCH_ZOOM_IMGS[bid];
 
-  el.innerHTML = createHUD('FASE 03 · ' + b.label,
+  el.innerHTML = createHUD('MISSÃO 03 · ' + b.label,
     placed + '/' + arteries.length + ' artérias', "renderPhase3()") +
     '<div class="game-wrap" style="overflow-y:auto;align-items:center;gap:12px">' +
       // Reference image with zoom-in feel
-      '<div id="branch-img-wrap" style="width:100%;max-width:640px;margin:0 auto;' +
-        'border-radius:12px;overflow:hidden;border:1px solid var(--border);flex-shrink:0">' +
-        '<img id="branch-ref-img" src="' + cfg.src + '" alt="Diagrama anatômico" ' +
-          'style="width:100%;height:auto;display:block;' +
-          (cfg.vb !== '0 0 1283 1404' || bid === 'lin' ? '' :
-            'object-fit:cover;object-position:100% 50%;') +
-          'filter:brightness(0.88) contrast(1.08)" ' +
-          '/>' +
+      '<div id="branch-img-wrap" style="width:100%;max-width:420px;margin:0 auto;' +
+        'border-radius:12px;overflow:hidden;border:1px solid var(--border);' +
+        'background:var(--surface2);flex-shrink:0">' +
+        '<img id="branch-ref-img" src="' + cfg.src + '" alt="Peça anatômica" ' +
+          'style="width:100%;max-height:180px;object-fit:contain;display:block" ' +
+          'onerror="this.parentElement.style.display=\'none\'"/>' +
       '</div>' +
       // Puzzle slots below
       '<div style="width:100%;max-width:640px;margin:0 auto">' +
-        buildBranchPuzzleSVG(bid, arteries, ps) +
+        buildBranchPuzzle(bid, arteries, ps) +
       '</div>' +
     '</div>';
 
   updateHUD();
 
-  // After DOM is ready, apply image crop for fac (right half of same image)
-  if (bid === 'fac') {
-    const img = document.getElementById('branch-ref-img');
-    if (img) {
-      img.style.objectFit = 'cover';
-      img.style.objectPosition = '100% 50%';
-      img.style.maxHeight = '220px';
-    }
-  } else if (bid === 'lin') {
-    const img = document.getElementById('branch-ref-img');
-    if (img) {
-      img.style.objectFit = 'cover';
-      img.style.objectPosition = '0% 50%';
-      img.style.maxHeight = '220px';
-    }
-  } else {
-    const img = document.getElementById('branch-ref-img');
-    if (img) img.style.maxHeight = '220px';
-  }
 }
 
-function buildBranchPuzzleSVG(bid, arteries, ps) {
+function buildBranchPuzzle(bid, arteries, ps) {
   const placed = ps.branchSteps[bid] || 0;
-  const SLOT_W = 230, SLOT_H = 32, GAP = 10;
-  const totalH = arteries.length * (SLOT_H + GAP) + 60;
-  const CX = 290;
 
-  let slots = '';
-  arteries.forEach((a, i) => {
-    const done = i < placed;
+  const rows = arteries.map(function(a, i) {
+    const done   = i < placed;
     const active = i === placed;
-    const y = 40 + i * (SLOT_H + GAP);
-    const isLeft = i % 2 === 0;
-    const sx = isLeft ? CX - SLOT_W - 16 : CX + 16;
-    const lineX = isLeft ? sx + SLOT_W : sx;
-    const lineY = y + SLOT_H / 2;
-    const midX = CX;
 
+    const numBg = done ? 'var(--green)' : (active ? 'var(--accent)' : '#1e2630');
+    const numBorder = done ? 'var(--green)' : (active ? 'var(--accent)' : '#30363d');
+    const numColor = (done || active) ? '#fff' : '#4a5568';
+
+    let boxStyle, boxContent;
     if (done) {
-      slots += '<rect x="' + sx + '" y="' + y + '" width="' + SLOT_W + '" height="' + SLOT_H + '" rx="6"' +
-        ' fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>' +
-        '<text x="' + (sx + SLOT_W/2) + '" y="' + (y + SLOT_H/2 + 1) + '"' +
-        ' font-family="Raleway,sans-serif" font-size="' + (a.label.length > 20 ? 7 : 8.5) + '" font-weight="700"' +
-        ' fill="#3fb950" text-anchor="middle" dominant-baseline="middle">' + a.label + '</text>';
+      boxStyle = 'background:rgba(63,185,80,0.15);border:1.5px solid var(--green)';
+      boxContent = '<span style="font-family:Raleway,sans-serif;font-size:11px;font-weight:700;' +
+        'color:var(--green);letter-spacing:0.02em">' + a.label + '</span>' +
+        '<span style="margin-left:auto;color:var(--green);font-size:14px;font-weight:700">✓</span>';
     } else if (active) {
-      slots += '<g onclick="openBranchSlot(\'' + bid + '\',' + i + ')" style="cursor:pointer">' +
-        '<rect x="' + sx + '" y="' + y + '" width="' + SLOT_W + '" height="' + SLOT_H + '" rx="6"' +
-        ' fill="rgba(200,86,58,0.14)" stroke="#c8563a" stroke-width="2" stroke-dasharray="7 3"/>' +
-        '<text x="' + (sx + SLOT_W/2) + '" y="' + (y + SLOT_H/2 + 1) + '"' +
-        ' font-family="Raleway,sans-serif" font-size="15" font-weight="900"' +
-        ' fill="#c8563a" text-anchor="middle" dominant-baseline="middle">?</text>' +
-        '</g>';
+      boxStyle = 'background:rgba(200,86,58,0.12);border:2px dashed var(--accent);cursor:pointer';
+      boxContent = '<span style="font-family:Raleway,sans-serif;font-size:15px;font-weight:900;' +
+        'color:var(--accent)">?</span>' +
+        '<span style="margin-left:8px;font-family:Raleway,sans-serif;font-size:10px;' +
+        'color:var(--text-muted)">clique para identificar</span>';
     } else {
-      slots += '<rect x="' + sx + '" y="' + y + '" width="' + SLOT_W + '" height="' + SLOT_H + '" rx="6"' +
-        ' fill="rgba(22,27,34,0.7)" stroke="#30363d" stroke-width="1" stroke-dasharray="4 3" opacity="0.45"/>' +
-        '<text x="' + (sx + SLOT_W/2) + '" y="' + (y + SLOT_H/2 + 1) + '"' +
-        ' font-family="Raleway,sans-serif" font-size="10" fill="#30363d"' +
-        ' text-anchor="middle" dominant-baseline="middle">—</text>';
+      boxStyle = 'background:rgba(22,27,34,0.6);border:1px dashed #30363d;opacity:0.45';
+      boxContent = '<span style="font-family:Raleway,sans-serif;font-size:11px;color:#30363d">—</span>';
     }
 
-    // Branch connector line
-    slots += '<line x1="' + lineX + '" y1="' + lineY + '" x2="' + midX + '" y2="' + lineY + '"' +
-      ' stroke="' + (done ? '#3fb950' : active ? '#c8563a' : '#30363d') + '"' +
-      ' stroke-width="' + (done ? 1.5 : active ? 1.5 : 1) + '"' +
-      ' opacity="' + (done ? 0.65 : active ? 0.5 : 0.2) + '"' +
-      ' stroke-dasharray="' + (done ? '0' : '4 3') + '"/>';
+    const clickAttr = active ? ' onclick="openBranchSlot(\'' + bid + '\',' + i + ')"' : '';
 
-    // Index number on trunk
-    slots += '<circle cx="' + CX + '" cy="' + lineY + '" r="7"' +
-      ' fill="' + (done ? '#3fb950' : active ? '#c8563a' : '#1e2630') + '"' +
-      ' stroke="' + (done ? '#3fb950' : active ? '#c8563a' : '#30363d') + '" stroke-width="1"/>' +
-      '<text x="' + CX + '" y="' + lineY + '" font-family="Raleway,sans-serif"' +
-      ' font-size="7" font-weight="900" fill="#fff" text-anchor="middle" dominant-baseline="middle">' +
-      (i + 1) + '</text>';
-  });
+    return '<div' + clickAttr + ' style="display:flex;align-items:center;gap:10px;margin-bottom:7px">' +
+      '<div style="width:24px;height:24px;border-radius:50%;flex-shrink:0;' +
+        'background:' + numBg + ';border:1.5px solid ' + numBorder + ';' +
+        'display:flex;align-items:center;justify-content:center;' +
+        'font-family:Raleway,sans-serif;font-size:10px;font-weight:800;color:' + numColor + '">' +
+        (i + 1) + '</div>' +
+      '<div style="flex:1;display:flex;align-items:center;padding:9px 13px;border-radius:8px;' +
+        'transition:all 0.15s;' + boxStyle + '">' + boxContent + '</div>' +
+    '</div>';
+  }).join('');
 
-  const trunk = '<line x1="' + CX + '" y1="20" x2="' + CX + '" y2="' + (totalH - 20) + '"' +
-    ' stroke="#c8563a" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>' +
-    '<text x="' + CX + '" y="13" font-family="Raleway,sans-serif" font-size="7" fill="#8b949e"' +
-    ' text-anchor="middle" font-weight="700" letter-spacing="0.1em">TRONCO</text>';
-
-  return '<svg viewBox="0 0 580 ' + totalH + '" xmlns="http://www.w3.org/2000/svg"' +
-    ' style="width:100%;background:var(--surface);border-radius:12px;border:1px solid var(--border)">' +
-    '<rect width="580" height="' + totalH + '" fill="var(--surface)" rx="12"/>' +
-    trunk + slots + '</svg>';
+  return '<div style="background:var(--surface);border:1px solid var(--border);' +
+      'border-radius:12px;padding:16px">' +
+      '<div style="font-family:Raleway,sans-serif;font-size:9px;font-weight:700;' +
+        'letter-spacing:0.14em;color:var(--text-muted);text-transform:uppercase;' +
+        'margin-bottom:12px">Ramos da artéria</div>' +
+      rows +
+    '</div>';
 }
 
 window.openBranchSlot = function(bid, idx) {
@@ -1122,22 +1150,6 @@ window.openBranchSlot = function(bid, idx) {
 function showBranchPopup(bid, artery, step, total) {
   document.getElementById('puzzle-q-title').textContent = artery.question;
   document.getElementById('puzzle-q-body').textContent = `${BRANCHES[bid].label} · Artéria ${step+1} de ${total}`;
-
-  // Set context image for this branch
-  const focus = BRANCH_IMG_FOCUS[bid];
-  const imgWrap = document.getElementById('puzzle-q-img-wrap');
-  const img = document.getElementById('puzzle-q-img');
-  if (focus) {
-    const imgSrc = IMAGES[focus.src];
-    img.src = imgSrc;
-    img.style.objectPosition = focus.pos;
-    img.style.objectFit = 'cover';
-    imgWrap.style.display = 'block';
-    // hide if image fails to load
-    img.onerror = () => { imgWrap.style.display = 'none'; };
-  } else {
-    imgWrap.style.display = 'none';
-  }
 
   const input = document.getElementById('puzzle-q-input');
   const submitBtn = document.getElementById('puzzle-q-submit');
@@ -1154,7 +1166,7 @@ function showBranchPopup(bid, artery, step, total) {
   function attempt() {
     const val = normalizeInput(input.value);
     if (!val) return;
-    if (val === normalizeInput(artery.label)) {
+    if (isAnswerCorrect(val, artery.label)) {
       input.className = 'answer-input correct';
       fb.className = 'feedback show success'; fb.textContent = `✅ Correto! ${artery.label}`;
       submitBtn.disabled = true; actions.style.display = 'flex';
@@ -1187,10 +1199,21 @@ function showBranchPopup(bid, artery, step, total) {
 // ─── PHASE 4 ─────────────────────────────────────────────────
 
 function initPhase4() {
-  const questions = pick(PHASE4_DB, 8).map(q => {
-    const wrong = shuffle(PHASE4_DB.filter(x => x.area !== q.area)).slice(0, 3).map(x => x.area);
-    return { ...q, options: shuffle([q.area, ...wrong]), answered: false };
-  });
+  // Weighted pick: some arteries appear more frequently
+  const PHASE4_PRIORITY = [
+    'A. CAROTIDA INTERNA','ARTÉRIA LINGUAL','ARTÉRIA FACIAL','ARTÉRIA MAXILAR',
+    'ARTÉRIA ALVEOLAR INFERIOR','ARTÉRIA TEMPORAL SUPERFICIAL',
+    'ARTÉRIA LABIAL INFERIOR','ARTÉRIA LABIAL SUPERIOR','ARTÉRIA ANGULAR',
+  ];
+  const prioritized = PHASE4_DB.filter(q => PHASE4_PRIORITY.some(p => q.artery.toUpperCase().includes(p.replace('ARTÉRIA ','').replace('A. ',''))));
+  const pool = [...prioritized, ...prioritized, ...PHASE4_DB]; // 2x weight on priority
+  const questions = pick(pool, 8)
+    .filter((q, i, arr) => arr.findIndex(x => x.artery === q.artery) === i) // deduplicate
+    .slice(0, 8)
+    .map(q => {
+      const wrong = shuffle(PHASE4_DB.filter(x => x.area !== q.area)).slice(0, 3).map(x => x.area);
+      return { ...q, options: shuffle([q.area, ...wrong]), answered: false };
+    });
   STATE.phase4State = { questions, current: 0, score: 0 };
   showScreen('screen-phase4');
   renderPhase4();
@@ -1202,7 +1225,7 @@ function renderPhase4() {
   const q = questions[current];
   const progress = Math.round(current / questions.length * 100);
   const el = document.getElementById('screen-phase4');
-  el.innerHTML = createHUD('FASE 04 · Áreas de Irrigação', `${current+1}/${questions.length}`, "showScreen('screen-home')") + `
+  el.innerHTML = createHUD('MISSÃO 04 · Áreas de Irrigação', `${current+1}/${questions.length}`, "showScreen('screen-home')") + `
     <div class="game-wrap" style="overflow-y:auto">
       <div class="fill-game">
         <div class="fill-progress-bar"><div class="fill-progress-inner" style="width:${progress}%"></div></div>
@@ -1252,7 +1275,7 @@ window.answerP4 = function(optIdx) {
 
 function completePhase(n, score, total) {
   if (!STATE.completedPhases.includes(n)) { STATE.completedPhases.push(n); saveProgress(); }
-  const titles = { 1:'Fase 1 Concluída!', 2:'Fase 2 Concluída!', 3:'Fase 3 Concluída!', 4:'Parabéns! Jogo Completo! 🎓' };
+  const titles = { 1:'Missão 1 Concluída!', 2:'Missão 2 Concluída!', 3:'Missão 3 Concluída!', 4:'Missão Completa! 🎓' };
   const msgs = {
     1: 'Você identificou o trígono carotídeo e seus três músculos delimitadores.',
     2: 'Você montou a árvore vascular da carótida com sucesso!',
