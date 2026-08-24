@@ -314,7 +314,7 @@ function buildApp() {
     <!-- HOME -->
     <div class="screen active" id="screen-home">
       <div class="home-logo">
-        <div class="eyebrow">Morfologia Bucomaxilofacial II</div>
+        <div class="eyebrow">Monitoria Acadêmica unifor</div>
         <h1>Missão<br/><span>Carótida</span></h1>
         <p class="subtitle">Morfologia Bucomaxilofacial II</p>
       </div>
