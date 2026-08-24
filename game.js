@@ -1278,7 +1278,13 @@ function buildBranchPuzzle(bid) {
     '<div id="p2-layout">' + bandeja +
       '<div id="p2-tabuleiro">' +
         '<div id="p3-drop-area" style="padding-bottom:' + cfg.ar + '%">' +
-          '<img class="p3-guia" src="img/' + cfg.completa + '" alt="" draggable="false"/>' +
+          '<img class="p3-guia" src="img/' + cfg.completa + '" alt="" draggable="false" ' +
+            'onerror="this.style.display=\'none\';' +
+            'this.parentElement.querySelector(\'.p3-guia-falhou\').style.display=\'flex\'"/>' +
+          '<div class="p3-guia-falhou" style="display:none">' +
+            '<span style="font-size:22px">🖼️</span>' +
+            '<span>Silhueta não encontrada<br/><code>img/' + cfg.completa + '</code></span>' +
+          '</div>' +
           '<img class="p3-seg p3-seg-ok" src="img/p3_' + bid + '_' + cfg.base + '.png" ' +
             'alt="" draggable="false"/>' +
           pecas +

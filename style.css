@@ -940,7 +940,7 @@ html, body {
 
 /* ── bandeja lateral rolável ───────────────────────────── */
 #p2-bandeja {
-  flex: 0 0 150px; display: flex; flex-direction: column;
+  flex: 0 0 156px; display: flex; flex-direction: column;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 12px; overflow: hidden;
   height: 70vh; max-height: 620px;
@@ -978,10 +978,10 @@ html, body {
 
 /* ── peça na bandeja ───────────────────────────────────── */
 .p2-piece {
-  width: 100%; max-width: 116px; height: 92px; flex-shrink: 0;
+  width: 100%; max-width: 122px; height: 100px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--surface2); border: 2px dashed var(--accent);
-  border-radius: 9px; padding: 4px; cursor: grab;
+  border-radius: 9px; padding: 3px; cursor: grab;
   transition: transform .15s, box-shadow .15s, border-color .15s;
 }
 .p2-piece img {
@@ -1266,16 +1266,16 @@ html, body {
 
 /* ===== MISSÃO 03 — quebra-cabeça ===== */
 #p3-bandeja {
-  flex: 0 0 150px; display: flex; flex-direction: column;
+  flex: 0 0 156px; display: flex; flex-direction: column;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 12px; overflow: hidden;
   height: 70vh; max-height: 620px;
 }
 
 #p3-drop-area {
-  position: relative; width: 100%; max-width: 440px; margin: 0 auto;
+  position: relative; width: 100%; max-width: 500px; margin: 0 auto;
   height: 0;                       /* altura vem do padding-bottom inline */
-  border-radius: 14px; overflow: hidden; background: #0d1117;
+  border-radius: 14px; overflow: hidden; background: #141b26;
   border: 2px dashed var(--border); user-select: none;
   transition: border-color .15s, box-shadow .15s, background .15s;
 }
@@ -1292,8 +1292,8 @@ html, body {
 
 /* gabarito: artéria completa escurecida, mas bem visível */
 #p3-drop-area .p3-guia {
-  opacity: .58;
-  filter: grayscale(.75) brightness(.50) contrast(1.15);
+  opacity: .34;
+  filter: grayscale(1) brightness(2.6) contrast(.85);
 }
 
 /* segmento encaixado: acende em cor plena */
@@ -1354,8 +1354,21 @@ html, body {
 .p3-legenda i {
   width: 13px; height: 8px; border-radius: 3px; display: inline-block;
 }
-.p3-am-escuro { background: #3d4a52; }
+.p3-am-escuro { background: #8b96a0; }
 .p3-am-claro  {
   background: linear-gradient(90deg, #4fb6c4, #3fb950);
   box-shadow: 0 0 5px rgba(63,185,80,.45);
+}
+
+/* gabarito ausente: avisa qual arquivo falta */
+.p3-guia-falhou {
+  position: absolute; inset: 0; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 24px; text-align: center; pointer-events: none;
+  font-family: var(--font-display); font-size: 11px; color: var(--text-muted);
+  line-height: 1.6;
+}
+.p3-guia-falhou code {
+  font-size: 10px; color: var(--accent2);
+  background: rgba(200,86,58,.12); padding: 3px 8px; border-radius: 5px;
 }
