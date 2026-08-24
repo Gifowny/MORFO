@@ -134,12 +134,12 @@ const BRANCHES = {
 };
 
 // ── MISSÃO 03 — quebra-cabeça por ramo ────────────────────────────────
-// Cada peça vira uma máscara p3_<ramo>_<id>.png do tamanho da imagem completa,
+// Cada peça é uma máscara p3_<ramo>_<id>.png do tamanho da imagem completa,
 // então o encaixe é pixel-perfeito (mesma técnica da Missão 02).
+//   base  = tronco do ramo, entra já aceso (não é peça arrastável)
+//   ordem = peças que o aluno precisa encaixar
+//   ar    = proporção altura/largura da imagem completa (garante altura do tabuleiro)
 const P3_RAMOS = {
-  // base  = tronco do ramo, já fica no tabuleiro (não é peça arrastável)
-  // ordem = peças que o aluno precisa encaixar
-  // ar    = proporção altura/largura da imagem completa (mantém o tabuleiro com altura)
   lin: { completa:'Lingual_completa.png', base:'lin_base', ar: 43.2,
          ordem:['rdl','sub','prl'] },
   fac: { completa:'Facial_completa.png',  base:'fac_base', ar:109.6,
@@ -288,9 +288,10 @@ function updateHUD() {
   desenharSeloDev();
 }
 
-function createHUD(phaseLabel, progressText, backFn) {
+function createHUD(phaseLabel, progressText, backFn, backLabel) {
+  const rotulo = backLabel || '⌂ Início';
   const backBtn = backFn
-    ? `<button class="btn btn-ghost btn-sm" style="padding:6px 12px;font-size:11px" onclick="${backFn}">⌂ Início</button>`
+    ? `<button class="btn btn-ghost btn-sm" style="padding:6px 12px;font-size:11px" onclick="${backFn}">${rotulo}</button>`
     : '';
   return `
     <div class="hud">
@@ -424,8 +425,8 @@ function buildApp() {
         <div class="credits-list">
           <div class="credit-item">
             <div class="role">Missão 01 — Trígono carotídeo</div>
-            <a class="credit-link" href="https://teachmeanatomy.info/neck/areas/anterior-triangle/"
-               target="_blank" rel="noopener">teachmeanatomy.info — Anterior triangle of the neck</a>
+            <a class="credit-link" href="https://www.kenhub.com/pt/library/anatomia/trigono-carotideo"
+               target="_blank" rel="noopener">Kenhub — Trígono carotídeo</a>
           </div>
           <div class="credit-item">
             <div class="role">Missões 02 e 03 — Ilustrações das artérias</div>
@@ -478,7 +479,7 @@ function buildApp() {
         </div>
         <div class="feedback" id="p2q-feedback"></div>
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap" id="p2q-actions">
-          <button class="btn btn-ghost btn-sm" onclick="closeOverlay('overlay-p2-q')">Cancelar</button>
+          <button class="btn btn-ghost btn-sm" onclick="cancelarPecaP2()">Cancelar</button>
           <button class="btn btn-primary btn-sm" id="p2q-submit">Confirmar</button>
         </div>
         <div style="display:none;justify-content:flex-end" id="p2q-next-wrap">
@@ -689,43 +690,41 @@ function buildNeckDiagram() {
   const zoomed = STATE.phase1Step > 0;
   const imgSrc = IMAGES.neck_triangle;
 
-  // Retângulos que cobrem os rótulos em inglês e a marca d'água.
-  // Medidos sobre img/trigono.png (710x434). Valores em % do container.
+  // Medidas reais sobre img/trigono.png (800x800):
+  //   região verde = trígono carotídeo: left 51.2%, top 38.8%, w 11.4%, h 20.0%
+  //   marca d'água + endereço no rodapé direito
   const COVERS = [
-    { l: 71.0, t: 15.0, w: 29.0, h:  8.0 },  // Stylohyoid
-    { l: 71.0, t: 23.8, w: 29.0, h:  8.0 },  // Digastric
-    { l: 69.5, t: 35.8, w: 30.5, h:  8.0 },  // SCM
-    { l:  0.0, t: 32.3, w: 27.5, h:  8.0 },  // Hyoid bone
-    { l:  0.0, t: 39.9, w: 29.0, h:  8.0 },  // Carotid triangle
-    { l:  0.0, t: 50.1, w: 27.5, h:  8.0 },  // Omohyoid
-    { l: 54.0, t: 85.0, w: 46.0, h: 15.0 },  // marca d'água
+    { l: 68.0, t: 88.5, w: 32.0, h: 11.5 },
   ];
   const coversHtml = COVERS.map(function(c) {
     return '<div style="position:absolute;left:' + c.l + '%;top:' + c.t + '%;' +
       'width:' + c.w + '%;height:' + c.h + '%;background:#ffffff;pointer-events:none"></div>';
   }).join('');
 
-  // Destaque do trígono (aparece só depois de responder)
+  // Moldura sobre a área verde (o trígono já vem colorido na ilustração)
+  const MOLD = 'position:absolute;left:49.5%;top:37.0%;width:14.8%;height:23.6%;' +
+               'border-radius:6px;pointer-events:none;';
+
   const triHtml = zoomed
-    ? '<div style="position:absolute;left:40.5%;top:27.5%;width:12.5%;height:26.5%;' +
-        'background:rgba(200,86,58,0.30);border:2px solid #c8563a;border-radius:4px;' +
-        'pointer-events:none"></div>' +
-      '<div style="position:absolute;left:46.5%;top:57%;transform:translateX(-50%);' +
-        'background:rgba(10,10,15,0.9);border-radius:6px;padding:5px 10px;pointer-events:none;' +
+    ? '<div style="' + MOLD + 'border:2.5px solid #c8563a;' +
+        'box-shadow:0 0 0 3px rgba(200,86,58,.25)"></div>' +
+      '<div style="position:absolute;left:56.9%;top:62%;transform:translateX(-50%);' +
+        'background:rgba(10,10,15,.92);border-radius:6px;padding:5px 10px;pointer-events:none;' +
         'font-family:Raleway,sans-serif;font-size:10px;font-weight:800;color:#ffcabb;' +
         'text-align:center;line-height:1.25;white-space:nowrap">TRÍGONO<br/>CAROTÍDEO</div>'
     : '';
 
-  // Caixa de pergunta (só no passo 1)
   const calloutHtml = zoomed ? '' :
-    '<div style="position:absolute;right:2%;top:60%;background:rgba(13,17,23,0.94);' +
-      'border:2px solid #c8563a;border-radius:8px;padding:7px 11px;pointer-events:none;' +
+    '<div style="' + MOLD + 'border:2.5px dashed #c8563a;' +
+      'background:rgba(200,86,58,.10)"></div>' +
+    '<div style="position:absolute;left:3%;top:33%;background:rgba(13,17,23,.94);' +
+      'border:2px solid #c8563a;border-radius:8px;padding:8px 12px;pointer-events:none;' +
       'font-family:Raleway,sans-serif;font-size:10px;font-weight:800;color:#c8563a;' +
-      'text-align:center;line-height:1.3">Qual região<br/>é esta? ←</div>';
+      'text-align:center;line-height:1.35;z-index:2">Qual região<br/>é esta? →</div>';
 
   return '<div id="neck-diagram-container" ' +
       'style="position:relative;width:100%;max-width:600px;margin:0 auto;line-height:0;' +
-        'border-radius:10px;overflow:hidden;background:#ffffff;min-height:180px">' +
+        'border-radius:10px;overflow:hidden;background:#ffffff;max-width:520px">' +
       '<img src="' + imgSrc + '" alt="Diagrama anatômico" ' +
         'style="width:100%;display:block" ' +
         'onerror="this.style.display=\'none\';' +
@@ -744,7 +743,7 @@ function buildNeckDiagram() {
 function renderP1Q1() {
   return `
     <div class="question-label">Pergunta 1 de 2</div>
-    <div class="question-text">A região destacada em azul está em evidência no diagrama.<br/>Qual é o nome dessa área anatômica do pescoço?</div>
+    <div class="question-text">Observe a região destacada em <strong style="color:#3fb950">verde</strong> na ilustração.<br/>Qual é o nome dessa área anatômica do pescoço?</div>
     <div class="feedback" id="p1-feedback"></div>
     <div class="answer-input-wrap">
       <input class="answer-input" id="p1-input" type="text"
@@ -1028,6 +1027,19 @@ function animarConclusaoP2() {
   setTimeout(function(){ completePhase(2); }, 2600);
 }
 
+// Fecha o popup da Missão 02 devolvendo a peça para a bandeja.
+window.cancelarPecaP2 = function() {
+  if (p2CurrentSlotId) {
+    const grupo = P2_GRUPOS[P2_PIECES[p2CurrentSlotId].cor] || [p2CurrentSlotId];
+    grupo.forEach(function(id) {
+      if (!STATE.phase2Placed.has(id)) STATE.phase2Posicionadas.delete(id);
+    });
+  }
+  p2CurrentSlotId = null;
+  closeOverlay('overlay-p2-q');
+  renderPhase2();
+};
+
 window.openP2Q = function(slotId) {
   if (STATE.phase2Placed.has(slotId)) return;
   p2CurrentSlotId = slotId;
@@ -1153,9 +1165,9 @@ function submitP2Answer() {
 
 function initPhase3() {
   STATE.phase3State = {
-    ramosProntos: new Set(),   // ramos concluídos
-    posic: {},                 // { ramo: Set(idsPosicionados) }
-    resolv: {},                // { ramo: Set(idsRespondidos) }
+    ramosProntos: new Set(),
+    posic:  {},   // { ramo: Set(peças soltas no tabuleiro) }
+    resolv: {},   // { ramo: Set(peças já nomeadas) }
   };
   showScreen('screen-phase3');
   renderPhase3();
@@ -1168,7 +1180,7 @@ function p3Estado(bid) {
   return ps;
 }
 
-// ── menu dos 4 ramos ─────────────────────────────────────────────
+// ── menu dos 4 ramos (sem miniaturas) ────────────────────────────
 function renderPhase3() {
   const el = document.getElementById('screen-phase3');
   const ps = STATE.phase3State;
@@ -1189,13 +1201,11 @@ function renderPhase3() {
           const pct = Math.round(feito / total * 100);
           return '<div class="p3-card' + (pronto ? ' p3-card-ok' : '') + '"' +
             (pronto ? '' : ' onclick="openBranch(\'' + bid + '\')"') + '>' +
-            '<img class="p3-card-img" src="img/' + P3_RAMOS[bid].completa + '" alt=""/>' +
             '<div class="p3-card-info">' +
               '<div class="p3-card-tag">' + (pronto ? '✅ Concluído' : '→ Montar') + '</div>' +
               '<div class="p3-card-nome">' + b.label + '</div>' +
               '<div class="p3-card-sub">' + feito + '/' + total + ' artérias</div>' +
-              (pronto ? '' :
-                '<div class="p3-bar"><div class="p3-bar-in" style="width:' + pct + '%"></div></div>') +
+              '<div class="p3-bar"><div class="p3-bar-in" style="width:' + pct + '%"></div></div>' +
             '</div>' +
           '</div>';
         }).join('') +
@@ -1214,7 +1224,7 @@ window.openBranch = function(bid) {
   showBranchZoom(bid);
 };
 
-// ── quebra-cabeça de um ramo ─────────────────────────────────────
+// ── quebra-cabeça do ramo ────────────────────────────────────────
 let p3DragId = null;
 
 function showBranchZoom(bid) {
@@ -1224,7 +1234,7 @@ function showBranchZoom(bid) {
   const feito = ps.resolv[bid].size;
 
   el.innerHTML = createHUD('MISSÃO 03 · ' + b.label,
-    feito + '/' + b.arteries.length + ' artérias', 'renderPhase3()') +
+    feito + '/' + b.arteries.length + ' artérias', 'renderPhase3()', '← Voltar') +
     '<div class="game-wrap" style="overflow-y:auto">' +
       '<div id="p3-puzzle-root"></div>' +
     '</div>';
@@ -1258,8 +1268,6 @@ function buildBranchPuzzle(bid) {
       '</div>' +
     '</aside>';
 
-  // Mesma lógica da Missão 02: o fundo é a artéria completa bem escurecida,
-  // e cada segmento acende em cor plena quando é encaixado/acertado.
   const pecas = cfg.ordem.filter(function(id){ return posic.has(id); }).map(function(id) {
     const ok = ps.resolv[bid].has(id);
     return '<img class="p3-seg' + (ok ? ' p3-seg-ok' : '') + '" draggable="false" alt="" ' +
@@ -1269,20 +1277,18 @@ function buildBranchPuzzle(bid) {
   root.innerHTML =
     '<div id="p2-layout">' + bandeja +
       '<div id="p2-tabuleiro">' +
-        // padding-bottom garante altura mesmo se a imagem falhar
         '<div id="p3-drop-area" style="padding-bottom:' + cfg.ar + '%">' +
-          // fundo: artéria completa escurecida, serve de gabarito
           '<img class="p3-guia" src="img/' + cfg.completa + '" alt="" draggable="false"/>' +
-          // tronco do ramo: já aceso, serve de âncora
           '<img class="p3-seg p3-seg-ok" src="img/p3_' + bid + '_' + cfg.base + '.png" ' +
             'alt="" draggable="false"/>' +
           pecas +
           (posic.size === 0
-            ? '<div class="p3-alvo"><span>Solte a peça aqui</span></div>'
-            : '') +
+            ? '<div class="p3-alvo"><span>Solte a peça aqui</span></div>' : '') +
         '</div>' +
-        '<p class="p2-dica">Arraste as peças da esquerda e solte no tabuleiro.<br/>' +
-          'Cada peça encaixa sozinha no lugar certo.</p>' +
+        '<p class="p2-dica">' +
+          '<span class="p3-legenda"><i class="p3-am-escuro"></i>Silhueta = artéria completa</span>' +
+          '<span class="p3-legenda"><i class="p3-am-claro"></i>Colorido = já identificado</span>' +
+          '<br/>Arraste as peças da esquerda e solte no tabuleiro.</p>' +
       '</div>' +
     '</div>';
 
@@ -1317,7 +1323,6 @@ function attachP3Events(bid) {
   area.addEventListener('click', function(){ if (p3DragId) soltarPecaP3(bid, p3DragId); });
 }
 
-// Encaixa a peça e pergunta o nome da artéria.
 function soltarPecaP3(bid, pieceId) {
   const ps = p3Estado(bid);
   if (ps.posic[bid].has(pieceId)) return;
@@ -1325,35 +1330,14 @@ function soltarPecaP3(bid, pieceId) {
   ps.posic[bid].add(pieceId);
   buildBranchPuzzle(bid);
 
-  const idx = BRANCHES[bid].arteries.findIndex(function(a){ return a.id === pieceId; });
-  if (idx === -1) return;
-  setTimeout(function(){ showBranchPopup(bid, BRANCHES[bid].arteries[idx], pieceId); }, 420);
+  const artery = BRANCHES[bid].arteries.find(function(a){ return a.id === pieceId; });
+  if (!artery) return;
+  setTimeout(function(){ showBranchPopup(bid, artery, pieceId); }, 420);
 }
 
-function verificarRamoCompleto(bid) {
-  const ps = STATE.phase3State;
-  const todas = BRANCHES[bid].arteries.every(function(a){ return ps.resolv[bid].has(a.id); });
-  if (todas) {
-    ps.ramosProntos.add(bid);
-    animarConclusaoP3(bid);
-    return true;
-  }
-  return false;
-}
-
-// Fecha o popup devolvendo a peça para a bandeja.
-window.cancelarPecaP3 = function() {
-  if (!p3Pendente) { closeOverlay('overlay-puzzle-q'); return; }
-  const bid = p3Pendente.bid, pid = p3Pendente.pieceId;
-  STATE.phase3State.posic[bid].delete(pid);
-  p3Pendente = null;
-  closeOverlay('overlay-puzzle-q');
-  showBranchZoom(bid);
-};
-
+// ── pergunta com dropdown ────────────────────────────────────────
+let p3Sel = null;
 let p3Pendente = null;   // { bid, pieceId } aguardando resposta
-
-let p3Sel = null;   // opção escolhida no dropdown
 
 window.toggleP3Dropdown = function() {
   const l = document.getElementById('p3q-lista');
@@ -1371,6 +1355,16 @@ window.selecionarP3 = function(valor, el) {
   el.classList.add('active');
 };
 
+// Fecha o popup devolvendo a peça para a bandeja.
+window.cancelarPecaP3 = function() {
+  if (!p3Pendente) { closeOverlay('overlay-puzzle-q'); return; }
+  const bid = p3Pendente.bid, pid = p3Pendente.pieceId;
+  STATE.phase3State.posic[bid].delete(pid);
+  p3Pendente = null;
+  closeOverlay('overlay-puzzle-q');
+  showBranchZoom(bid);
+};
+
 function showBranchPopup(bid, artery, pieceId) {
   p3Pendente = { bid: bid, pieceId: pieceId };
   p3Sel = null;
@@ -1381,7 +1375,6 @@ function showBranchPopup(bid, artery, pieceId) {
   document.getElementById('puzzle-q-body').textContent =
     BRANCHES[bid].label + ' · Artéria ' + feito + ' de ' + BRANCHES[bid].arteries.length;
 
-  // opções = artérias do ramo ainda não identificadas, embaralhadas
   const restantes = BRANCHES[bid].arteries
     .filter(function(a){ return !ps.resolv[bid].has(a.id); });
   const opcoes = shuffle(restantes.map(function(a){ return a.label; }));
@@ -1407,7 +1400,6 @@ function showBranchPopup(bid, artery, pieceId) {
   const acts = document.getElementById('puzzle-q-actions');
   fb.className = 'feedback';
   acts.style.display = 'none';
-
   const btn = document.getElementById('p3q-ok');
 
   function tentar() {
@@ -1426,7 +1418,14 @@ function showBranchPopup(bid, artery, pieceId) {
         p3Pendente = null;
         closeOverlay('overlay-puzzle-q');
         ps.resolv[bid].add(pieceId);
-        if (!verificarRamoCompleto(bid)) showBranchZoom(bid);
+        const todas = BRANCHES[bid].arteries
+          .every(function(a){ return ps.resolv[bid].has(a.id); });
+        if (todas) {
+          ps.ramosProntos.add(bid);
+          animarConclusaoP3(bid);
+        } else {
+          showBranchZoom(bid);
+        }
       };
     } else {
       const morreu = loseLife(function(){ closeOverlay('overlay-puzzle-q'); initPhase3(); });
@@ -1435,7 +1434,7 @@ function showBranchPopup(bid, artery, pieceId) {
         fb.textContent = '❌ Incorreto. A resposta é: ' + artery.label;
         setTimeout(function() {
           p3Pendente = null;
-          ps.posic[bid].delete(pieceId);      // peça volta para a bandeja
+          ps.posic[bid].delete(pieceId);   // peça volta para a bandeja
           closeOverlay('overlay-puzzle-q');
           showBranchZoom(bid);
         }, 2600);
@@ -1454,7 +1453,7 @@ function animarConclusaoP3(bid) {
 
   area.classList.add('p2-concluido');
   area.innerHTML =
-    '<img class="p2-final" src="img/' + P3_RAMOS[bid].completa + '" alt=""/>' +
+    '<img class="p3-final" src="img/' + P3_RAMOS[bid].completa + '" alt=""/>' +
     '<div class="p2-final-tag">' + BRANCHES[bid].label + ' completa</div>';
 
   const dica = document.querySelector('.p2-dica');
